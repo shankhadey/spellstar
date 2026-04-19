@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SpellStar - Learn to Spell & Write</title>
+<title>SpellStar v1.4 - Learn to Spell & Write</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -29,7 +29,7 @@
   .grade-btn{background:var(--surface);border:3px solid transparent;border-radius:var(--radius);padding:18px 14px;cursor:pointer;transition:all .2s;text-align:center;min-width:140px;}
   .grade-btn:hover,.grade-btn:focus{border-color:var(--accent);transform:scale(1.06);background:var(--surface2);box-shadow:0 0 24px rgba(247,201,72,.3);outline:none;}
   .grade-btn.selected{border-color:var(--accent3);background:rgba(78,205,196,.15);box-shadow:0 0 24px rgba(78,205,196,.4);}
-  .grade-btn .ge{font-size:40px;display:block;margin-bottom:4px;}
+  .grade-btn .ge{width:64px;height:64px;display:block;margin:0 auto 8px;font-size:52px;line-height:64px;text-align:center;}
   .grade-btn .gl{font-family:'Fredoka One',cursive;font-size:21px;color:var(--accent);display:block;}
   .grade-btn .gs{font-size:14px;color:var(--text-dim);margin-top:2px;display:block;}
 
@@ -131,6 +131,7 @@
 <div class="screen active" id="screen-grade">
   <div class="app-title">⭐ SpellStar</div>
   <div class="app-subtitle">Pick your grade to start!</div>
+  <div style="font-size:12px;color:var(--text-dim);margin-top:-16px;cursor:pointer;" onclick="toggleDebugPanel()">v1.4</div>
   <div class="grade-grid" id="grade-grid"></div>
   <div class="voice-picker-row">
     <span class="voice-picker-label">🔊 Voice:</span>
@@ -198,6 +199,9 @@
   </div>
 </div>
 
+<!-- DEBUG PANEL - tap bottom-left corner 3x to show/hide -->
+<div id="debug-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(0,0,0,.9);color:#0f0;font-family:monospace;font-size:14px;padding:12px;max-height:40vh;overflow-y:auto;"></div>
+
 <!-- CELEBRATION -->
 <div id="celebration">
   <div class="celebrate-word" id="celebrate-word"></div>
@@ -207,13 +211,13 @@
 
 <script>
 const GRADES = [
-  {id:'kindergarten',label:'Kinder', emoji:'🌱',age:'Ages 5-6', file:'words/kindergarten.json'},
-  {id:'grade1',      label:'Grade 1',emoji:'🐣',age:'Ages 6-7', file:'words/grade1.json'},
-  {id:'grade2',      label:'Grade 2',emoji:'🦋',age:'Ages 7-8', file:'words/grade2.json'},
-  {id:'grade3',      label:'Grade 3',emoji:'🚀',age:'Ages 8-9', file:'words/grade3.json'},
-  {id:'grade4',      label:'Grade 4',emoji:'⭐',age:'Ages 9-10',file:'words/grade4.json'},
-  {id:'grade5',      label:'Grade 5',emoji:'🏆',age:'Ages 10-11',file:'words/grade5.json'},
-  {id:'grade6',      label:'Grade 6',emoji:'🎓',age:'Age 11+',  file:'words/grade6.json'},
+  {id:'kindergarten',label:'Kinder', emoji:'🌱', tw:'1f331', age:'Ages 5-6', file:'words/kindergarten.json'},
+  {id:'grade1',      label:'Grade 1',emoji:'🐣', tw:'1f423', age:'Ages 6-7', file:'words/grade1.json'},
+  {id:'grade2',      label:'Grade 2',emoji:'🦋', tw:'1f98b', age:'Ages 7-8', file:'words/grade2.json'},
+  {id:'grade3',      label:'Grade 3',emoji:'🚀', tw:'1f680', age:'Ages 8-9', file:'words/grade3.json'},
+  {id:'grade4',      label:'Grade 4',emoji:'⭐', tw:'2b50',  age:'Ages 9-10',file:'words/grade4.json'},
+  {id:'grade5',      label:'Grade 5',emoji:'🏆', tw:'1f3c6', age:'Ages 10-11',file:'words/grade5.json'},
+  {id:'grade6',      label:'Grade 6',emoji:'🎓', tw:'1f393', age:'Age 11+',  file:'words/grade6.json'},
 ];
 
 const NOVELTY_VOICES = ['Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Good News',
@@ -266,10 +270,14 @@ function buildStars() {
 
 // ── VOICE ─────────────────────────────────────────
 function loadVoices() {
-  if (!window.speechSynthesis) return;
+  if (!window.speechSynthesis) {
+    console.log('[SpellStar] speechSynthesis NOT available');
+    return;
+  }
   state.voices = window.speechSynthesis.getVoices()
     .filter(v => v.lang.startsWith('en') && !NOVELTY_VOICES.some(n => v.name.startsWith(n)));
-  console.log('[SpellStar] Voices:', state.voices.map(v => v.name));
+  console.log('[SpellStar] All voices:', window.speechSynthesis.getVoices().map(v => v.name + ' ' + v.lang));
+  console.log('[SpellStar] Filtered en voices:', state.voices.map(v => v.name));
   pickVoice();
 }
 
@@ -320,26 +328,41 @@ function applyGenderUI() {
 // ── SPEAK ─────────────────────────────────────────
 // Single speak function - same voice for everything
 function speak(text, rate = 1) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang   = 'en-US';
-  utter.rate   = rate;
-  utter.pitch  = state.pitch;
-  utter.volume = 1;
-  if (state.pickedVoice) utter.voice = state.pickedVoice;
-  window.speechSynthesis.speak(utter);
+  if (!window.speechSynthesis) {
+    console.log('[SpellStar] TTS not available');
+    return;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang   = 'en-US';
+    utter.rate   = rate;
+    utter.pitch  = state.pitch;
+    utter.volume = 1;
+    if (state.pickedVoice) utter.voice = state.pickedVoice;
+    utter.onerror = (e) => console.log('[SpellStar] TTS error:', e.error, text.substring(0,20));
+    utter.onstart = () => console.log('[SpellStar] TTS speaking:', text.substring(0,20));
+    window.speechSynthesis.speak(utter);
+  } catch(e) {
+    console.log('[SpellStar] TTS exception:', e);
+  }
 }
 
 // ── GRADES ────────────────────────────────────────
 function buildGradeGrid() {
   const grid = document.getElementById('grade-grid');
   grid.innerHTML = '';
+  // Use Twemoji SVGs only on webOS (where native emoji render as black outlines)
+  // Everywhere else use native emoji which look better
+  const isWebOS = /Web0S|webOS|SMART-TV/i.test(navigator.userAgent);
   GRADES.forEach(g => {
     const btn = document.createElement('button');
     btn.className = 'grade-btn' + (state.grade === g.id ? ' selected' : '');
     btn.tabIndex = 0;
-    btn.innerHTML = `<span class="ge">${g.emoji}</span><span class="gl">${g.label}</span><span class="gs">${g.age}</span>`;
+    const iconHtml = isWebOS
+      ? `<img class="ge" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${g.tw}.svg" alt="${g.emoji}">`
+      : `<span class="ge">${g.emoji}</span>`;
+    btn.innerHTML = `${iconHtml}<span class="gl">${g.label}</span><span class="gs">${g.age}</span>`;
     btn.onclick = () => loadGrade(g);
     grid.appendChild(btn);
   });
@@ -353,7 +376,7 @@ async function loadGrade(g) {
     const data = await res.json();
     state.words = data.words.sort();
     state.filtered = [...state.words];
-    document.getElementById('current-grade-label').textContent = g.emoji + ' ' + g.label;
+    document.getElementById('current-grade-label').textContent = g.label;
     renderWordList();
     showMainScreen();
     resetStage();
@@ -599,7 +622,7 @@ function animateCursiveWord(word) {
   }));
   keypoints.unshift({ clipX: textX, dotX: textX }); // start
 
-  const msPerLetter = 1000;
+  const msPerLetter = 280;
   const totalDur = word.length * msPerLetter;
 
   if (state.cursiveAnim) cancelAnimationFrame(state.cursiveAnim);
@@ -726,6 +749,52 @@ window.nextWord = function() {
 function updateScore() {
   document.getElementById('score-num').textContent = state.score;
   localStorage.setItem('spellstar_score', state.score);
+}
+
+// ── DEBUG PANEL ───────────────────────────────────
+// Debug panel - click version number to open, or tap bottom-left 3x
+let debugTaps = 0, debugTimer = null;
+window.toggleDebugPanel = function() {
+  const panel = document.getElementById('debug-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'block') runDebug();
+};
+document.addEventListener('click', e => {
+  const inZone = e.clientX < 150 && e.clientY > (window.innerHeight - 150);
+  if (!inZone) return;
+  debugTaps++;
+  clearTimeout(debugTimer);
+  debugTimer = setTimeout(() => { debugTaps = 0; }, 1500);
+  if (debugTaps >= 3) { debugTaps = 0; toggleDebugPanel(); }
+});
+
+function dbLog(msg) {
+  const panel = document.getElementById('debug-panel');
+  if (panel && panel.style.display !== 'none') {
+    panel.innerHTML += msg + '<br>';
+    panel.scrollTop = panel.scrollHeight;
+  }
+  console.log(msg);
+}
+
+function runDebug() {
+  const panel = document.getElementById('debug-panel');
+  panel.innerHTML = '<b>SpellStar Debug</b><br>';
+  dbLog('speechSynthesis: ' + (window.speechSynthesis ? 'YES' : 'NO'));
+  if (window.speechSynthesis) {
+    const all = window.speechSynthesis.getVoices();
+    dbLog('Total voices: ' + all.length);
+    all.forEach(v => dbLog('  ' + v.name + ' | ' + v.lang + ' | default:' + v.default));
+    dbLog('Picked: ' + (state.pickedVoice?.name || 'none'));
+    dbLog('Pitch: ' + state.pitch);
+    dbLog('--- Testing TTS now ---');
+    const test = new SpeechSynthesisUtterance('hello');
+    test.volume = 1;
+    test.onstart = () => dbLog('TTS started OK');
+    test.onend   = () => dbLog('TTS ended OK');
+    test.onerror = (e) => dbLog('TTS ERROR: ' + e.error);
+    window.speechSynthesis.speak(test);
+  }
 }
 </script>
 </body>
