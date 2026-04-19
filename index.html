@@ -211,13 +211,13 @@
 
 <script>
 const GRADES = [
-  {id:'kindergarten',label:'Kinder', emoji:'🌱', tw:'1f331', age:'Ages 5-6', file:'words/kindergarten.json'},
-  {id:'grade1',      label:'Grade 1',emoji:'🐣', tw:'1f423', age:'Ages 6-7', file:'words/grade1.json'},
-  {id:'grade2',      label:'Grade 2',emoji:'🦋', tw:'1f98b', age:'Ages 7-8', file:'words/grade2.json'},
-  {id:'grade3',      label:'Grade 3',emoji:'🚀', tw:'1f680', age:'Ages 8-9', file:'words/grade3.json'},
-  {id:'grade4',      label:'Grade 4',emoji:'⭐', tw:'2b50',  age:'Ages 9-10',file:'words/grade4.json'},
-  {id:'grade5',      label:'Grade 5',emoji:'🏆', tw:'1f3c6', age:'Ages 10-11',file:'words/grade5.json'},
-  {id:'grade6',      label:'Grade 6',emoji:'🎓', tw:'1f393', age:'Age 11+',  file:'words/grade6.json'},
+  {id:'kindergarten',label:'Kinder', img:'images/seedling.svg',    age:'Ages 5-6', file:'words/kindergarten.json'},
+  {id:'grade1',      label:'Grade 1',img:'images/chick.svg',       age:'Ages 6-7', file:'words/grade1.json'},
+  {id:'grade2',      label:'Grade 2',img:'images/butterfly.svg',   age:'Ages 7-8', file:'words/grade2.json'},
+  {id:'grade3',      label:'Grade 3',img:'images/rocket.svg',      age:'Ages 8-9', file:'words/grade3.json'},
+  {id:'grade4',      label:'Grade 4',img:'images/star.svg',        age:'Ages 9-10',file:'words/grade4.json'},
+  {id:'grade5',      label:'Grade 5',img:'images/trophy.svg',      age:'Ages 10-11',file:'words/grade5.json'},
+  {id:'grade6',      label:'Grade 6',img:'images/graduation.svg',  age:'Age 11+',  file:'words/grade6.json'},
 ];
 
 const NOVELTY_VOICES = ['Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Good News',
@@ -352,17 +352,11 @@ function speak(text, rate = 1) {
 function buildGradeGrid() {
   const grid = document.getElementById('grade-grid');
   grid.innerHTML = '';
-  // Use Twemoji SVGs only on webOS (where native emoji render as black outlines)
-  // Everywhere else use native emoji which look better
-  const isWebOS = /Web0S|webOS|SMART-TV/i.test(navigator.userAgent);
   GRADES.forEach(g => {
     const btn = document.createElement('button');
     btn.className = 'grade-btn' + (state.grade === g.id ? ' selected' : '');
     btn.tabIndex = 0;
-    const iconHtml = isWebOS
-      ? `<img class="ge" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${g.tw}.svg" alt="${g.emoji}">`
-      : `<span class="ge">${g.emoji}</span>`;
-    btn.innerHTML = `${iconHtml}<span class="gl">${g.label}</span><span class="gs">${g.age}</span>`;
+    btn.innerHTML = `<img class="ge" src="${g.img}" alt="${g.label}"><span class="gl">${g.label}</span><span class="gs">${g.age}</span>`;
     btn.onclick = () => loadGrade(g);
     grid.appendChild(btn);
   });
