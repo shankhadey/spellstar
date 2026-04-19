@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpellStar - Learn to Spell & Write</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0d1a;--surface:#1a1a2e;--surface2:#16213e;
+    --accent:#f7c948;--accent2:#ff6b6b;--accent3:#4ecdc4;--accent4:#a78bfa;
+    --text:#f0f0ff;--text-dim:#8888aa;--radius:20px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;user-select:none;}
+
+  .stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+  .star-dot{position:absolute;border-radius:50%;background:white;animation:twinkle var(--dur,3s) ease-in-out infinite;animation-delay:var(--delay,0s);}
+  @keyframes twinkle{0%,100%{opacity:.2;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
+
+  .screen{position:fixed;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s ease;}
+  .screen.active{opacity:1;pointer-events:all;}
+
+  /* GRADE SCREEN */
+  #screen-grade{gap:22px;padding:28px;}
+  .app-title{font-family:'Fredoka One',cursive;font-size:72px;color:var(--accent);line-height:1;text-shadow:0 0 40px rgba(247,201,72,.5),4px 4px 0 rgba(0,0,0,.3);}
+  .app-subtitle{font-size:26px;color:var(--accent3);font-weight:700;}
+  .grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:6px;}
+  .grade-btn{background:var(--surface);border:3px solid transparent;border-radius:var(--radius);padding:18px 14px;cursor:pointer;transition:all .2s;text-align:center;min-width:140px;}
+  .grade-btn:hover,.grade-btn:focus{border-color:var(--accent);transform:scale(1.06);background:var(--surface2);box-shadow:0 0 24px rgba(247,201,72,.3);outline:none;}
+  .grade-btn.selected{border-color:var(--accent3);background:rgba(78,205,196,.15);box-shadow:0 0 24px rgba(78,205,196,.4);}
+  .grade-btn .ge{font-size:40px;display:block;margin-bottom:4px;}
+  .grade-btn .gl{font-family:'Fredoka One',cursive;font-size:21px;color:var(--accent);display:block;}
+  .grade-btn .gs{font-size:14px;color:var(--text-dim);margin-top:2px;display:block;}
+
+  /* ── VOICE PICKER ── */
+  .voice-picker-row{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:50px;padding:10px 24px;border:2px solid rgba(255,255,255,.08);}
+  .voice-picker-label{font-size:18px;font-weight:700;color:var(--text-dim);}
+  .voice-opt{font-family:'Fredoka One',cursive;font-size:20px;padding:8px 24px;border-radius:50px;border:2px solid transparent;cursor:pointer;transition:all .2s;background:transparent;color:var(--text);}
+  .voice-opt:hover{background:rgba(255,255,255,.08);}
+  .voice-opt.active{background:var(--accent);color:var(--bg);}
+  .voice-toggle{display:flex;gap:4px;align-items:center;background:var(--surface);border-radius:50px;padding:4px 8px 4px 14px;border:2px solid rgba(255,255,255,.08);}
+  .voice-toggle-lbl{font-size:14px;color:var(--text-dim);font-weight:700;}
+  .vtbtn{font-family:'Fredoka One',cursive;font-size:17px;padding:4px 14px;border-radius:50px;border:2px solid transparent;cursor:pointer;background:transparent;color:var(--text-dim);transition:all .2s;}
+  .vtbtn.active{background:var(--accent);color:var(--bg);}
+  .vtbtn:hover{background:rgba(255,255,255,.08);}
+
+  /* MAIN SCREEN */
+  #screen-main{flex-direction:column;padding:16px 32px 12px;gap:8px;justify-content:flex-start;height:100vh;}
+
+  .top-bar{display:flex;align-items:center;width:100%;flex-shrink:0;}
+  .top-bar .grade-badge{flex:none;}
+  .top-bar-left{flex:1;display:flex;justify-content:flex-start;}
+  .top-bar-center{flex:0 0 auto;font-family:'Fredoka One',cursive;font-size:24px;color:var(--accent3);}
+  .top-bar-right{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:14px;}
+  .grade-badge{font-family:'Fredoka One',cursive;font-size:22px;color:var(--accent);background:var(--surface);border:2px solid transparent;border-radius:50px;padding:4px 18px;cursor:pointer;transition:all .2s;}
+  .grade-badge:hover{background:var(--surface2);transform:scale(1.04);}
+
+  .score-display{font-family:'Fredoka One',cursive;font-size:26px;color:var(--accent);display:flex;align-items:center;gap:5px;}
+  .streak-display{font-family:'Fredoka One',cursive;font-size:20px;color:var(--accent2);display:flex;align-items:center;gap:4px;}
+  .streak-display.hot{color:#ff9f43;text-shadow:0 0 12px rgba(255,159,67,.6);}
+
+  .main-content{flex:1;display:flex;gap:18px;width:100%;min-height:0;}
+
+  /* WORD PANEL */
+  .word-panel{width:260px;flex-shrink:0;background:var(--surface);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;border:2px solid rgba(255,255,255,.06);}
+  .search-box-wrap{padding:10px;border-bottom:2px solid rgba(255,255,255,.06);}
+  .search-box{width:100%;background:var(--bg);border:2px solid var(--accent4);border-radius:11px;padding:9px 12px;font-size:20px;font-family:'Nunito',sans-serif;color:var(--text);outline:none;transition:border-color .2s;}
+  .search-box::placeholder{color:var(--text-dim);}
+  .search-box:focus{border-color:var(--accent);}
+  .word-list{flex:1;overflow-y:auto;padding:5px;scrollbar-width:thin;scrollbar-color:var(--accent4) transparent;}
+  .word-list::-webkit-scrollbar{width:4px;}
+  .word-list::-webkit-scrollbar-thumb{background:var(--accent4);border-radius:2px;}
+  .word-item{font-size:22px;font-family:'Nunito',sans-serif;font-weight:700;padding:8px 12px;border-radius:10px;cursor:pointer;transition:all .15s;color:var(--text);border:2px solid transparent;}
+  .word-item:hover,.word-item:focus{background:rgba(247,201,72,.12);border-color:var(--accent);color:var(--accent);outline:none;}
+  .word-item.active{background:rgba(78,205,196,.15);border-color:var(--accent3);color:var(--accent3);}
+
+  /* SPELL STAGE */
+  .spell-stage{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-height:0;overflow:hidden;}
+  .word-display-area{background:var(--surface);border-radius:var(--radius);padding:18px 32px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.06);flex-shrink:0;min-height:140px;}
+  .prompt-text{font-size:24px;color:var(--text-dim);margin-bottom:12px;font-weight:600;}
+  .letter-boxes{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;align-items:center;}
+  .letter-box{width:68px;height:80px;background:var(--bg);border:3px solid rgba(255,255,255,.1);border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:46px;color:transparent;transition:all .3s ease;}
+  .letter-box.revealed{border-color:var(--accent3);color:var(--accent);background:rgba(78,205,196,.08);box-shadow:0 0 12px rgba(247,201,72,.2);animation:popIn .3s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes popIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+
+  .placeholder{text-align:center;color:var(--text-dim);flex-direction:column;}
+  .placeholder .ph-icon{font-size:52px;margin-bottom:8px;}
+  .placeholder .ph-text{font-size:26px;font-weight:700;}
+  .placeholder .ph-sub{font-size:16px;margin-top:4px;}
+
+  .cursive-area{background:var(--surface);border-radius:var(--radius);padding:12px 18px;width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;border:2px solid rgba(255,255,255,.06);flex:1;min-height:0;}
+  .cursive-label{font-size:18px;color:var(--text-dim);font-weight:700;flex-shrink:0;}
+  #cursive-canvas{width:100%;flex:1;min-height:0;background:rgba(255,255,255,.03);border-radius:13px;border:2px dashed rgba(255,255,255,.1);display:block;}
+
+  .action-row{display:flex;gap:12px;align-items:center;justify-content:center;width:100%;flex-shrink:0;padding-bottom:2px;}
+  .btn{font-family:'Fredoka One',cursive;font-size:22px;border:none;border-radius:13px;padding:10px 22px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px;min-height:52px;white-space:nowrap;}
+  .btn:hover,.btn:focus{transform:scale(1.06);outline:none;}
+  .btn:active{transform:scale(.97);}
+  .btn-mic{background:var(--accent2);color:#fff;min-width:140px;box-shadow:0 4px 16px rgba(255,107,107,.4);}
+  .btn-mic.listening{background:#ff3333;animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(255,50,50,.4)}50%{box-shadow:0 4px 28px rgba(255,50,50,.9),0 0 0 9px rgba(255,50,50,.12)}}
+  .btn-write{background:var(--accent4);color:#fff;min-width:130px;box-shadow:0 4px 16px rgba(167,139,250,.35);}
+  .btn-next{background:var(--accent3);color:var(--bg);min-width:90px;box-shadow:0 4px 16px rgba(78,205,196,.35);}
+  .btn-replay{background:var(--accent4);color:#fff;font-size:18px;padding:7px 16px;}
+  .btn-replay-spell{font-family:'Fredoka One',cursive;font-size:16px;margin-top:12px;padding:7px 20px;border-radius:50px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--text-dim);cursor:pointer;transition:all .2s;}
+  .btn-replay-spell:hover{border-color:var(--accent3);color:var(--accent3);background:rgba(78,205,196,.08);}
+
+  .voice-status{font-size:18px;color:var(--accent2);font-weight:700;height:26px;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .voice-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:vp .6s ease-in-out infinite alternate;}
+  @keyframes vp{from{transform:scale(1);opacity:.5}to{transform:scale(1.6);opacity:1}}
+
+  .speech-warning{background:rgba(255,107,107,.12);border:2px solid var(--accent2);border-radius:11px;padding:9px 18px;font-size:16px;color:var(--accent2);font-weight:700;text-align:center;flex-shrink:0;}
+
+  /* CELEBRATION */
+  #celebration{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(13,13,26,.85);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s;}
+  #celebration.show{opacity:1;pointer-events:all;}
+  .celebrate-word{font-family:'Dancing Script',cursive;font-size:120px;color:var(--accent);text-shadow:0 0 60px rgba(247,201,72,.6);animation:cf 1s ease-in-out infinite alternate;}
+  @keyframes cf{from{transform:translateY(-10px) rotate(-2deg)}to{transform:translateY(10px) rotate(2deg)}}
+  .celebrate-msg{font-family:'Fredoka One',cursive;font-size:48px;color:var(--accent3);margin-top:12px;}
+  .celebrate-streak{font-family:'Fredoka One',cursive;font-size:32px;color:#ff9f43;margin-top:6px;}
+  .confetti-piece{position:fixed;border-radius:3px;animation:fall linear forwards;}
+  @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<!-- GRADE SCREEN -->
+<div class="screen active" id="screen-grade">
+  <div class="app-title">⭐ SpellStar</div>
+  <div class="app-subtitle">Pick your grade to start!</div>
+  <div class="grade-grid" id="grade-grid"></div>
+  <div class="voice-picker-row">
+    <span class="voice-picker-label">🔊 Voice:</span>
+    <button class="voice-opt active" id="vopt-female" onclick="setGender('female')">👩 Woman</button>
+    <button class="voice-opt" id="vopt-male" onclick="setGender('male')">👨 Man</button>
+  </div>
+</div>
+
+<!-- MAIN SCREEN -->
+<div class="screen" id="screen-main">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <button class="grade-badge" onclick="showGradeScreen()">⬅ Grade</button>
+    </div>
+    <div class="top-bar-center" id="current-grade-label"></div>
+    <div class="top-bar-right">
+      <div class="voice-toggle">
+        <span class="voice-toggle-lbl">🔊</span>
+        <button class="vtbtn active" id="vtog-female" onclick="setGender('female')">👩</button>
+        <button class="vtbtn" id="vtog-male" onclick="setGender('male')">👨</button>
+      </div>
+      <div class="streak-display" id="streak-display" style="display:none;">🔥 <span id="streak-num">0</span></div>
+      <div class="score-display">⭐ <span id="score-num">0</span></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="word-panel">
+      <div class="search-box-wrap">
+        <input class="search-box" id="search-box" type="text" placeholder="🔍 Search words..."
+          oninput="filterWords()" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="word-list" id="word-list"></div>
+    </div>
+
+    <div class="spell-stage">
+      <div class="word-display-area">
+        <div class="placeholder" id="placeholder" style="display:flex;">
+          <div class="ph-icon">🎤</div>
+          <div class="ph-text">Say a word or pick one!</div>
+          <div class="ph-sub">Tap the mic or choose from the list</div>
+        </div>
+        <div class="prompt-text" id="prompt-text" style="display:none;"></div>
+        <div class="letter-boxes" id="letter-boxes" style="display:none;"></div>
+        <button class="btn-replay-spell" id="replay-btn" onclick="replaySpelling()" style="display:none;">🔁 Replay</button>
+      </div>
+
+      <div class="voice-status" id="voice-status"></div>
+      <div id="speech-warning" style="display:none;width:100%;">
+        <div class="speech-warning">🎤 Voice not available on this browser. Use the word list!</div>
+      </div>
+
+      <div class="cursive-area" id="cursive-area" style="display:none;">
+        <div class="cursive-label">✍️ Watch how to write it in cursive:</div>
+        <canvas id="cursive-canvas"></canvas>
+        <button class="btn btn-replay" onclick="replayCursive()">▶ Replay Writing</button>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-mic" id="mic-btn" onclick="toggleMic()">🎤 Say a Word</button>
+        <button class="btn btn-write" id="write-btn" onclick="showCursive()" style="display:none;">✍️ Write It</button>
+        <button class="btn btn-next" id="next-btn" onclick="nextWord()" style="display:none;">Next ➡</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CELEBRATION -->
+<div id="celebration">
+  <div class="celebrate-word" id="celebrate-word"></div>
+  <div class="celebrate-msg" id="celebrate-msg"></div>
+  <div class="celebrate-streak" id="celebrate-streak"></div>
+</div>
+
+<script>
+const GRADES = [
+  {id:'kindergarten',label:'Kinder', emoji:'🌱',age:'Ages 5-6', file:'words/kindergarten.json'},
+  {id:'grade1',      label:'Grade 1',emoji:'🐣',age:'Ages 6-7', file:'words/grade1.json'},
+  {id:'grade2',      label:'Grade 2',emoji:'🦋',age:'Ages 7-8', file:'words/grade2.json'},
+  {id:'grade3',      label:'Grade 3',emoji:'🚀',age:'Ages 8-9', file:'words/grade3.json'},
+  {id:'grade4',      label:'Grade 4',emoji:'⭐',age:'Ages 9-10',file:'words/grade4.json'},
+  {id:'grade5',      label:'Grade 5',emoji:'🏆',age:'Ages 10-11',file:'words/grade5.json'},
+  {id:'grade6',      label:'Grade 6',emoji:'🎓',age:'Age 11+',  file:'words/grade6.json'},
+];
+
+const NOVELTY_VOICES = ['Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Good News',
+  'Jester','Organ','Superstar','Trinoids','Whisper','Wobble','Zarvox'];
+
+const state = {
+  grade:   localStorage.getItem('spellstar_grade') || null,
+  gender:  localStorage.getItem('spellstar_gender') || 'female',
+  words:[], filtered:[],
+  currentWord: null,
+  score:   parseInt(localStorage.getItem('spellstar_score')||'0'),
+  streak:  0,
+  spellingInterval: null,
+  cursiveAnim: null,
+  recognition: null,
+  listening: false,
+  speechSupported: false,
+  voices: [],
+  pickedVoice: null,
+  pitch: 1.2,
+};
+
+// ── INIT ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildStars();
+  buildGradeGrid();
+  checkSpeechSupport();
+  loadVoices();
+  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = loadVoices;
+  updateScore();
+  applyGenderUI();
+
+  if (state.grade) {
+    const g = GRADES.find(g => g.id === state.grade);
+    if (g) loadGrade(g); else showGradeScreen();
+  }
+});
+
+// ── STARS ─────────────────────────────────────────
+function buildStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 65; i++) {
+    const s = document.createElement('div');
+    s.className = 'star-dot';
+    const sz = Math.random() * 3 + 1;
+    s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--delay:${Math.random()*4}s;`;
+    c.appendChild(s);
+  }
+}
+
+// ── VOICE ─────────────────────────────────────────
+function loadVoices() {
+  if (!window.speechSynthesis) return;
+  state.voices = window.speechSynthesis.getVoices()
+    .filter(v => v.lang.startsWith('en') && !NOVELTY_VOICES.some(n => v.name.startsWith(n)));
+  console.log('[SpellStar] Voices:', state.voices.map(v => v.name));
+  pickVoice();
+}
+
+function pickVoice() {
+  if (!state.voices.length) return;
+  const all = state.voices;
+
+  if (state.gender === 'female') {
+    // 1. Samantha  2. first en-US  3. first available
+    state.pickedVoice =
+      all.find(v => v.name === 'Samantha') ||
+      all.find(v => v.lang === 'en-US') ||
+      all[0];
+    state.pitch = 1.2;
+  } else {
+    // 1. Google UK English Male  2. Daniel  3. Aaron  4. Fred  5. Samantha at 0.1
+    state.pickedVoice =
+      all.find(v => v.name === 'Google UK English Male (en-GB)') ||
+      all.find(v => v.name === 'Google UK English Male') ||
+      all.find(v => v.name.startsWith('Daniel')) ||
+      all.find(v => v.name.startsWith('Aaron')) ||
+      all.find(v => v.name.startsWith('Fred')) ||
+      all.find(v => v.name === 'Samantha') ||
+      all[0];
+    // Use lower pitch for male voices; if fell back to Samantha use 0.1
+    const isSamanthaFallback = state.pickedVoice?.name === 'Samantha';
+    state.pitch = isSamanthaFallback ? 0.1 : 0.8;
+  }
+
+  console.log(`[SpellStar] Gender: ${state.gender} | Voice: "${state.pickedVoice?.name}" | Pitch: ${state.pitch}`);
+}
+
+window.setGender = function(g) {
+  state.gender = g;
+  localStorage.setItem('spellstar_gender', g);
+  pickVoice();
+  applyGenderUI();
+};
+
+function applyGenderUI() {
+  const f = state.gender === 'female';
+  document.getElementById('vopt-female')?.classList.toggle('active', f);
+  document.getElementById('vopt-male')?.classList.toggle('active', !f);
+  document.getElementById('vtog-female')?.classList.toggle('active', f);
+  document.getElementById('vtog-male')?.classList.toggle('active', !f);
+}
+
+// ── SPEAK ─────────────────────────────────────────
+// Single speak function - same voice for everything
+function speak(text, rate = 1) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang   = 'en-US';
+  utter.rate   = rate;
+  utter.pitch  = state.pitch;
+  utter.volume = 1;
+  if (state.pickedVoice) utter.voice = state.pickedVoice;
+  window.speechSynthesis.speak(utter);
+}
+
+// ── GRADES ────────────────────────────────────────
+function buildGradeGrid() {
+  const grid = document.getElementById('grade-grid');
+  grid.innerHTML = '';
+  GRADES.forEach(g => {
+    const btn = document.createElement('button');
+    btn.className = 'grade-btn' + (state.grade === g.id ? ' selected' : '');
+    btn.tabIndex = 0;
+    btn.innerHTML = `<span class="ge">${g.emoji}</span><span class="gl">${g.label}</span><span class="gs">${g.age}</span>`;
+    btn.onclick = () => loadGrade(g);
+    grid.appendChild(btn);
+  });
+}
+
+async function loadGrade(g) {
+  state.grade = g.id;
+  localStorage.setItem('spellstar_grade', g.id);
+  try {
+    const res = await fetch(g.file);
+    const data = await res.json();
+    state.words = data.words.sort();
+    state.filtered = [...state.words];
+    document.getElementById('current-grade-label').textContent = g.emoji + ' ' + g.label;
+    renderWordList();
+    showMainScreen();
+    resetStage();
+  } catch(e) {
+    alert('Could not load word list. Make sure the words/ folder is next to index.html and you are serving via http.');
+  }
+}
+
+window.showGradeScreen = function() {
+  buildGradeGrid();
+  applyGenderUI();
+  document.getElementById('screen-grade').classList.add('active');
+  document.getElementById('screen-main').classList.remove('active');
+};
+
+function showMainScreen() {
+  document.getElementById('screen-grade').classList.remove('active');
+  document.getElementById('screen-main').classList.add('active');
+}
+
+// ── WORD LIST ─────────────────────────────────────
+function renderWordList() {
+  const list = document.getElementById('word-list');
+  list.innerHTML = '';
+  state.filtered.forEach(word => {
+    const item = document.createElement('div');
+    item.className = 'word-item' + (state.currentWord === word ? ' active' : '');
+    item.textContent = word;
+    item.tabIndex = 0;
+    item.onclick = () => selectWord(word);
+    item.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') selectWord(word); };
+    list.appendChild(item);
+  });
+}
+
+window.filterWords = function() {
+  const q = document.getElementById('search-box').value.toLowerCase().trim();
+  state.filtered = q ? state.words.filter(w => w.startsWith(q)) : [...state.words];
+  renderWordList();
+};
+
+function selectWord(word) {
+  state.currentWord = word;
+  renderWordList();
+  resetStage(word);
+  setTimeout(() => startSpelling(), 80);
+}
+
+// ── MIC ───────────────────────────────────────────
+function checkSpeechSupport() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  state.speechSupported = !!SR;
+  if (!state.speechSupported) {
+    document.getElementById('speech-warning').style.display = 'block';
+    document.getElementById('mic-btn').style.display = 'none';
+  }
+}
+
+window.toggleMic = function() { state.listening ? stopMic() : startMic(); };
+
+function startMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  state.recognition = new SR();
+  state.recognition.lang = 'en-US';
+  state.recognition.interimResults = false;
+  state.recognition.maxAlternatives = 3;
+
+  state.recognition.onstart = () => {
+    state.listening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('mic-btn').textContent = '🔴 Listening...';
+    setVoiceStatus('Say your word!');
+  };
+  state.recognition.onresult = (event) => {
+    stopMic();
+    let word = event.results[0][0].transcript.trim().toLowerCase().split(' ')[0].replace(/[^a-z]/g, '');
+    if (word) {
+      state.currentWord = word;
+      resetStage(word);
+      renderWordList();
+      setVoiceStatus('');
+      setTimeout(() => startSpelling(), 80);
+    }
+  };
+  state.recognition.onerror = () => stopMic();
+  state.recognition.onend   = () => stopMic();
+  state.recognition.start();
+}
+
+function stopMic() {
+  state.listening = false;
+  try { state.recognition?.stop(); } catch(e) {}
+  document.getElementById('mic-btn').classList.remove('listening');
+  document.getElementById('mic-btn').textContent = '🎤 Say a Word';
+  setVoiceStatus('');
+}
+
+function setVoiceStatus(msg) {
+  const el = document.getElementById('voice-status');
+  el.innerHTML = msg ? `<div class="voice-dot"></div> ${msg}` : '';
+}
+
+// ── SPELLING ──────────────────────────────────────
+function resetStage(word) {
+  clearInterval(state.spellingInterval);
+  hideCursive();
+  document.getElementById('write-btn').style.display  = 'none';
+  document.getElementById('next-btn').style.display   = 'none';
+  document.getElementById('replay-btn').style.display = 'none';
+
+  const placeholder  = document.getElementById('placeholder');
+  const letterBoxes  = document.getElementById('letter-boxes');
+  const promptText   = document.getElementById('prompt-text');
+
+  if (!word) {
+    placeholder.style.display  = 'flex';
+    letterBoxes.style.display  = 'none';
+    promptText.style.display   = 'none';
+    return;
+  }
+
+  placeholder.style.display  = 'none';
+  promptText.style.display   = 'block';
+  promptText.textContent     = `"${word}"`;
+  letterBoxes.style.display  = 'flex';
+  letterBoxes.innerHTML      = '';
+
+  const letters = word.split('');
+  letters.forEach(letter => {
+    const box = document.createElement('div');
+    box.className = 'letter-box';
+    box.dataset.letter = letter;
+    box.textContent = letter;
+    if (letters.length > 10) box.style.cssText = 'width:54px;height:65px;font-size:37px;';
+    if (letters.length > 14) box.style.cssText = 'width:43px;height:52px;font-size:29px;border-radius:9px;';
+    letterBoxes.appendChild(box);
+  });
+}
+
+function startSpelling() {
+  if (!state.currentWord) return;
+  const word    = state.currentWord;
+  const boxes   = document.querySelectorAll('.letter-box');
+  const letters = word.split('');
+  let i = 0;
+
+  boxes.forEach(b => b.classList.remove('revealed'));
+
+  // Speak full word first
+  speak(word, 0.85);
+
+  // Reveal letters one by one - same voice, slightly slower rate
+  setTimeout(() => {
+    clearInterval(state.spellingInterval);
+    state.spellingInterval = setInterval(() => {
+      if (i < letters.length) {
+        boxes[i].classList.add('revealed');
+        speak(letters[i], 0.8);
+        i++;
+      } else {
+        clearInterval(state.spellingInterval);
+        // Speak the full word again at the end
+        setTimeout(() => {
+          speak(word, 0.85);
+          document.getElementById('write-btn').style.display  = 'flex';
+          document.getElementById('next-btn').style.display   = 'flex';
+          document.getElementById('replay-btn').style.display = 'flex';
+        }, 500);
+      }
+    }, 750);
+  }, 1300);
+}
+
+// ── CURSIVE ───────────────────────────────────────
+window.showCursive = function() {
+  if (!state.currentWord) return;
+  document.getElementById('cursive-area').style.display = 'flex';
+  document.getElementById('write-btn').style.display = 'none';
+  animateCursiveWord(state.currentWord);
+  celebrate(state.currentWord);
+};
+
+function hideCursive() {
+  document.getElementById('cursive-area').style.display = 'none';
+  if (state.cursiveAnim) { cancelAnimationFrame(state.cursiveAnim); state.cursiveAnim = null; }
+}
+
+window.replayCursive = function() {
+  if (!state.currentWord) return;
+  if (state.cursiveAnim) { cancelAnimationFrame(state.cursiveAnim); state.cursiveAnim = null; }
+  requestAnimationFrame(() => animateCursiveWord(state.currentWord));
+};
+
+window.replaySpelling = function() {
+  if (!state.currentWord) return;
+  // Reset boxes then re-run spelling
+  document.querySelectorAll('.letter-box').forEach(b => b.classList.remove('revealed'));
+  document.getElementById('write-btn').style.display  = 'none';
+  document.getElementById('next-btn').style.display   = 'none';
+  document.getElementById('replay-btn').style.display = 'none';
+  startSpelling();
+};
+
+function animateCursiveWord(word) {
+  const canvas = document.getElementById('cursive-canvas');
+  const ctx    = canvas.getContext('2d');
+  const dpr    = window.devicePixelRatio || 1;
+  const rect   = canvas.getBoundingClientRect();
+  const W = rect.width  > 10 ? rect.width  : 700;
+  const H = rect.height > 10 ? rect.height : 130;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const drawLines = () => {
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+    [0.25, 0.55, 0.78].forEach(f => {
+      ctx.beginPath(); ctx.moveTo(0, H * f); ctx.lineTo(W, H * f); ctx.stroke();
+    });
+  };
+
+  const fontSize = Math.max(40, Math.min(96, Math.floor(W / (word.length * 0.62))));
+  ctx.font = `bold ${fontSize}px 'Dancing Script',cursive`;
+  ctx.textBaseline = 'alphabetic';
+
+  const totalWidth = ctx.measureText(word).width;
+  const textX = (W - totalWidth) / 2;
+  const textY = H * 0.74;
+  const dotY  = textY - fontSize * 0.15;
+
+  // Measure cumulative x position after each letter so dot tracks real ink
+  const letterWidths = [];
+  let cumulative = 0;
+  for (const ch of word) {
+    const w = ctx.measureText(ch).width;
+    letterWidths.push({ ch, x: textX + cumulative, w });
+    cumulative += w;
+  }
+  // Keypoints: [{clipX, dotX}] per letter boundary
+  const keypoints = letterWidths.map((l, i) => ({
+    clipX: l.x + l.w,          // reveal up to end of this letter
+    dotX:  l.x + l.w,          // dot sits at end of this letter
+  }));
+  keypoints.unshift({ clipX: textX, dotX: textX }); // start
+
+  const msPerLetter = 1000;
+  const totalDur = word.length * msPerLetter;
+
+  if (state.cursiveAnim) cancelAnimationFrame(state.cursiveAnim);
+  const t0 = performance.now();
+
+  function frame(now) {
+    const elapsed  = now - t0;
+    const progress = Math.min(elapsed / totalDur, 1);
+
+    // Which letter are we currently drawing?
+    const letterProgress = progress * word.length;
+    const letterIdx      = Math.min(Math.floor(letterProgress), word.length - 1);
+    const letterFrac     = letterProgress - Math.floor(letterProgress);
+
+    // Guard: if keypoints not ready yet, skip frame
+    if (!keypoints || keypoints.length < 2) {
+      state.cursiveAnim = requestAnimationFrame(frame);
+      return;
+    }
+
+    // Interpolate clipX and dotX within current letter
+    const prev = keypoints[letterIdx]     || keypoints[0];
+    const next = keypoints[letterIdx + 1] || keypoints[keypoints.length - 1];
+    const clipX = prev.clipX + (next.clipX - prev.clipX) * letterFrac;
+    const dotX  = prev.dotX  + (next.dotX  - prev.dotX)  * letterFrac;
+
+    ctx.clearRect(0, 0, W, H); drawLines();
+
+    // Ghost word
+    ctx.font = `bold ${fontSize}px 'Dancing Script',cursive`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.shadowBlur = 0;
+    ctx.fillText(word, textX, textY);
+
+    // Revealed (colored) portion - clip to current x position
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, clipX, H); ctx.clip();
+    ctx.shadowColor = 'rgba(247,201,72,0.8)'; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#f7c948';
+    ctx.fillText(word, textX, textY);
+    ctx.restore();
+
+    // Dot exactly at ink tip
+    if (progress < 1) {
+      ctx.beginPath(); ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(255,255,255,0.9)'; ctx.shadowBlur = 12; ctx.fill();
+      state.cursiveAnim = requestAnimationFrame(frame);
+    } else {
+      // Final glowing state - no dot
+      ctx.clearRect(0, 0, W, H); drawLines();
+      ctx.font = `bold ${fontSize}px 'Dancing Script',cursive`;
+      ctx.textBaseline = 'alphabetic';
+      ctx.shadowColor = 'rgba(247,201,72,0.5)'; ctx.shadowBlur = 26;
+      ctx.fillStyle = '#f7c948'; ctx.fillText(word, textX, textY);
+    }
+  }
+  state.cursiveAnim = requestAnimationFrame(frame);
+}
+
+// ── CELEBRATION ───────────────────────────────────
+function celebrate(word) {
+  state.streak++;
+  state.score++;
+  updateScore();
+  updateStreak();
+
+  const msgs = ['Amazing!','Great job!','You got it!','Superstar!','Brilliant!','Awesome!'];
+  const msg  = msgs[Math.floor(Math.random() * msgs.length)];
+  document.getElementById('celebrate-word').textContent  = word;
+  document.getElementById('celebrate-msg').textContent   = '⭐ ' + msg + ' ⭐';
+
+  let streakMsg = '';
+  if      (state.streak === 3)                        streakMsg = '🔥 3 in a row! +2 bonus stars!';
+  else if (state.streak === 5)                        streakMsg = '🔥🔥 5 streak! Incredible!';
+  else if (state.streak > 5 && state.streak % 5 === 0) streakMsg = `🔥🔥🔥 ${state.streak} streak! LEGEND!`;
+  document.getElementById('celebrate-streak').textContent = streakMsg;
+
+  if (state.streak === 3 || (state.streak > 3 && state.streak % 5 === 0)) {
+    state.score += 2; updateScore();
+  }
+
+  document.getElementById('celebration').classList.add('show');
+  spawnConfetti(state.streak >= 5 ? 90 : 55);
+  speak(msg + ' The word is ' + word, 0.85);
+
+  setTimeout(() => {
+    document.getElementById('celebration').classList.remove('show');
+    clearConfetti();
+  }, 2800);
+}
+
+function updateStreak() {
+  const el  = document.getElementById('streak-display');
+  const num = document.getElementById('streak-num');
+  if (state.streak >= 2) {
+    el.style.display = 'flex';
+    num.textContent  = state.streak;
+    el.classList.toggle('hot', state.streak >= 3);
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+const confettiPieces = [];
+const COLORS = ['#f7c948','#ff6b6b','#4ecdc4','#a78bfa','#ff9f43','#54a0ff'];
+function spawnConfetti(count = 55) {
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    const dur = 1.5 + Math.random() * 2;
+    p.style.cssText = `left:${Math.random()*100}vw;top:-20px;background:${COLORS[Math.floor(Math.random()*COLORS.length)]};width:${8+Math.random()*10}px;height:${8+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'3px'};animation-duration:${dur}s;animation-delay:${Math.random()*.8}s;`;
+    document.body.appendChild(p);
+    confettiPieces.push(p);
+  }
+}
+function clearConfetti() { confettiPieces.forEach(p => p.remove()); confettiPieces.length = 0; }
+
+window.nextWord = function() {
+  const avail = state.filtered.filter(w => w !== state.currentWord);
+  if (!avail.length) return;
+  selectWord(avail[Math.floor(Math.random() * avail.length)]);
+};
+
+function updateScore() {
+  document.getElementById('score-num').textContent = state.score;
+  localStorage.setItem('spellstar_score', state.score);
+}
+</script>
+</body>
+</html>
