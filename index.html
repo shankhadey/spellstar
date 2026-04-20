@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SpellStar v1.4 - Learn to Spell & Write</title>
+<title>SpellStar v1.5 - Learn to Spell & Write</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -119,11 +119,23 @@
   @keyframes cf{from{transform:translateY(-10px) rotate(-2deg)}to{transform:translateY(10px) rotate(2deg)}}
   .celebrate-msg{font-family:'Fredoka One',cursive;font-size:48px;color:var(--accent3);margin-top:12px;}
   .celebrate-streak{font-family:'Fredoka One',cursive;font-size:32px;color:#ff9f43;margin-top:6px;}
-  .confetti-piece{position:fixed;border-radius:3px;animation:fall linear forwards;}
-  @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+  /* TV BOOKMARK PROMPT */
+  #tv-prompt{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:90;background:var(--surface2);border:2px solid var(--accent);border-radius:20px;padding:18px 28px;max-width:620px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:slideUp .4s ease;}
+  @keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+  #tv-prompt .tp-title{font-family:'Fredoka One',cursive;font-size:22px;color:var(--accent);margin-bottom:8px;}
+  #tv-prompt .tp-steps{font-size:16px;color:var(--text);line-height:1.8;margin-bottom:14px;}
+  #tv-prompt .tp-steps b{color:var(--accent3);}
+  #tv-prompt .tp-dismiss{font-family:'Fredoka One',cursive;font-size:16px;background:var(--accent);color:var(--bg);border:none;border-radius:50px;padding:8px 24px;cursor:pointer;}
 </style>
 </head>
 <body>
+
+<!-- TV BOOKMARK PROMPT - shown once on TV browsers -->
+<div id="tv-prompt" style="display:none;">
+  <div class="tp-title">📺 Save SpellStar to your TV!</div>
+  <div class="tp-steps" id="tv-prompt-steps"></div>
+  <button class="tp-dismiss" onclick="dismissTvPrompt()">Got it! ✓</button>
+</div>
 
 <div class="stars" id="stars"></div>
 
@@ -131,7 +143,7 @@
 <div class="screen active" id="screen-grade">
   <div class="app-title">⭐ SpellStar</div>
   <div class="app-subtitle">Pick your grade to start!</div>
-  <div style="font-size:12px;color:var(--text-dim);margin-top:-16px;cursor:pointer;" onclick="toggleDebugPanel()">v1.4</div>
+  <div style="font-size:12px;color:var(--text-dim);margin-top:-16px;cursor:pointer;" onclick="toggleDebugPanel()">v1.5</div>
   <div class="grade-grid" id="grade-grid"></div>
   <div class="voice-picker-row">
     <span class="voice-picker-label">🔊 Voice:</span>
@@ -249,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = loadVoices;
   updateScore();
   applyGenderUI();
+  showTvPrompt();
 
   if (state.grade) {
     const g = GRADES.find(g => g.id === state.grade);
@@ -744,6 +757,50 @@ function updateScore() {
   document.getElementById('score-num').textContent = state.score;
   localStorage.setItem('spellstar_score', state.score);
 }
+
+// ── TV BOOKMARK PROMPT ────────────────────────────
+function detectTV() {
+  const ua = navigator.userAgent;
+  if (/WebOS|webOS|Web0S/i.test(ua))   return 'lg';
+  if (/Tizen|SMART-TV|SmartTV/i.test(ua)) return 'samsung';
+  if (/PhilipsTV|NETTV/i.test(ua))     return 'philips';
+  if (/HbbTV/i.test(ua))               return 'hbbtv';
+  return null;
+}
+
+const LG_STEPS = `
+  <b>1.</b> Press the <b>Settings (⚙)</b> button on your Magic Remote<br>
+  <b>2.</b> Select <b>Bookmarks → Add Bookmark</b> (or press ⭐ in the browser toolbar)<br>
+  <b>3.</b> Next time: open the browser and tap your SpellStar bookmark
+`;
+
+const SAMSUNG_STEPS = `
+  <b>1.</b> Press the <b>Menu</b> button on your remote<br>
+  <b>2.</b> In the browser, select <b>Menu → Add Bookmark</b><br>
+  <b>3.</b> Or press and hold the <b>Enter</b> button on the current page<br>
+  <b>4.</b> Next time: open the browser and tap your SpellStar bookmark
+`;
+
+const GENERIC_STEPS = `
+  <b>1.</b> Open your TV browser menu or settings<br>
+  <b>2.</b> Add this page to Bookmarks or Favourites<br>
+  <b>3.</b> Next time: one tap to open SpellStar!
+`;
+
+function showTvPrompt() {
+  const tv = detectTV();
+  if (!tv) return; // Not a TV, don't show
+  if (localStorage.getItem('spellstar_tv_bookmarked')) return; // Already dismissed
+
+  const steps = tv === 'lg' ? LG_STEPS : tv === 'samsung' ? SAMSUNG_STEPS : GENERIC_STEPS;
+  document.getElementById('tv-prompt-steps').innerHTML = steps;
+  document.getElementById('tv-prompt').style.display = 'block';
+}
+
+window.dismissTvPrompt = function() {
+  document.getElementById('tv-prompt').style.display = 'none';
+  localStorage.setItem('spellstar_tv_bookmarked', '1');
+};
 
 // ── DEBUG PANEL ───────────────────────────────────
 // Debug panel - click version number to open, or tap bottom-left 3x
