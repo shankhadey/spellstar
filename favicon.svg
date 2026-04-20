@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Star -->
+  <polygon points="32,4 39,24 60,24 44,37 50,58 32,45 14,58 20,37 4,24 25,24"
+    fill="#f7c948" stroke="#e6b800" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Pencil body -->
+  <rect x="26" y="18" width="12" height="28" rx="2" fill="#ffffff" stroke="#e6b800" stroke-width="1"/>
+  <!-- Pencil eraser -->
+  <rect x="26" y="18" width="12" height="6" rx="1" fill="#ff6b6b" stroke="#e05555" stroke-width="0.8"/>
+  <!-- Pencil tip -->
+  <polygon points="26,46 38,46 32,56" fill="#ff9f43" stroke="#e67e22" stroke-width="0.8"/>
+  <!-- Pencil point -->
+  <polygon points="28.5,52 35.5,52 32,57.5" fill="#2c2c54"/>
+  <!-- Pencil center line -->
+  <line x1="32" y1="24" x2="32" y2="46" stroke="#cccccc" stroke-width="0.8" stroke-dasharray="2,2"/>
+</svg>
