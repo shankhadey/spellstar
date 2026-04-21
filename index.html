@@ -21,14 +21,22 @@
   #screen-grade{gap:20px;padding:24px;}
   .app-title{font-family:'Fredoka One',cursive;font-size:72px;color:var(--accent);line-height:1;text-shadow:0 0 40px rgba(247,201,72,.5),4px 4px 0 rgba(0,0,0,.3);}
   .app-subtitle{font-size:22px;color:var(--accent3);font-weight:700;}
-  .grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-  .grade-btn{background:var(--surface);border:3px solid transparent;border-radius:var(--radius);padding:16px 12px;cursor:pointer;transition:all .2s;text-align:center;min-width:130px;}
+  .grade-groups{display:flex;flex-direction:column;gap:14px;width:100%;}
+  .grade-group{display:flex;flex-direction:column;gap:8px;width:100%;}
+  .grade-group-header{display:flex;align-items:center;gap:10px;}
+  .grade-group-label{font-family:'Fredoka One',cursive;font-size:16px;font-weight:700;white-space:nowrap;}
+  .grade-group-label.parent{color:#ff9f43;}
+  .grade-group-label.solo{color:var(--accent3);}
+  .grade-group-line{flex:1;height:2px;border-radius:2px;opacity:.3;}
+  .grade-group-line.parent{background:#ff9f43;}
+  .grade-group-line.solo{background:var(--accent3);}
+  .grade-group-cards{display:flex;gap:10px;flex-wrap:wrap;}
+  .grade-btn{background:var(--surface);border:3px solid transparent;border-radius:var(--radius);padding:14px 10px;cursor:pointer;transition:all .2s;text-align:center;flex:1;min-width:90px;max-width:160px;}
   .grade-btn:hover,.grade-btn:focus{border-color:var(--accent);transform:scale(1.06);background:var(--surface2);box-shadow:0 0 24px rgba(247,201,72,.3);outline:none;}
   .grade-btn.selected{border-color:var(--accent3);background:rgba(78,205,196,.15);box-shadow:0 0 24px rgba(78,205,196,.4);}
-  .grade-btn .ge{width:60px;height:60px;display:block;margin:0 auto 6px;font-size:48px;line-height:60px;text-align:center;}
-  .grade-btn .gl{font-family:'Fredoka One',cursive;font-size:20px;color:var(--accent);display:block;}
-  .grade-btn .gs{font-size:12px;color:var(--text-dim);margin-top:2px;display:block;}
-  .grade-btn .ga{font-size:11px;color:var(--accent3);margin-top:3px;display:block;font-weight:700;}
+  .grade-btn .ge{width:52px;height:52px;display:block;margin:0 auto 5px;font-size:42px;line-height:52px;text-align:center;}
+  .grade-btn .gl{font-family:'Fredoka One',cursive;font-size:17px;color:var(--accent);display:block;}
+  .grade-btn .gs{font-size:11px;color:var(--text-dim);margin-top:2px;display:block;}
 
   /* VOICE + MODE PICKERS */
   .picker-row{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:50px;padding:9px 22px;border:2px solid rgba(255,255,255,.08);}
@@ -124,6 +132,8 @@
   .btn-next{background:var(--accent3);color:var(--bg);box-shadow:0 4px 14px rgba(78,205,196,.35);}
   .btn-ghost{background:rgba(255,255,255,.07);color:var(--text-dim);border:2px solid rgba(255,255,255,.1);}
 
+  .btn-replay-spell{font-family:'Fredoka One',cursive;font-size:15px;margin-top:10px;padding:6px 18px;border-radius:50px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--text-dim);cursor:pointer;transition:all .2s;}
+  .btn-replay-spell:hover{border-color:var(--accent3);color:var(--accent3);}
   .voice-status{font-size:15px;color:var(--accent2);font-weight:700;height:20px;display:flex;align-items:center;gap:5px;flex-shrink:0;}
   .voice-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);animation:vp .6s ease-in-out infinite alternate;}
   @keyframes vp{from{transform:scale(1);opacity:.5}to{transform:scale(1.6);opacity:1}}
@@ -151,10 +161,11 @@
   @media(max-width:600px){
     #screen-grade{gap:10px;padding:12px;}
     .app-title{font-size:36px;} .app-subtitle{font-size:14px;}
-    .grade-grid{grid-template-columns:repeat(2,1fr);gap:7px;}
-    .grade-btn{padding:9px 5px;min-width:0;}
-    .grade-btn .ge{width:38px;height:38px;font-size:30px;line-height:38px;}
-    .grade-btn .gl{font-size:13px;} .grade-btn .gs{font-size:9px;} .grade-btn .ga{font-size:9px;}
+    .grade-groups{gap:10px;}
+    .grade-group-label{font-size:13px;}
+    .grade-btn{padding:9px 5px;min-width:70px;}
+    .grade-btn .ge{width:36px;height:36px;font-size:28px;line-height:36px;}
+    .grade-btn .gl{font-size:13px;} .grade-btn .gs{font-size:9px;}
     .picker-row{padding:6px 10px;gap:6px;} .picker-label{font-size:12px;} .picker-btn{font-size:13px;padding:5px 10px;}
     #screen-main{padding:7px 9px 5px;gap:4px;}
     .grade-badge{font-size:12px;padding:3px 9px;} .top-bar-center{font-size:13px;} .mode-pill{font-size:11px;padding:2px 8px;}
@@ -184,6 +195,7 @@
     .app-title{font-size:86px;}
     .grade-btn .ge{width:70px;height:70px;font-size:56px;line-height:70px;}
     .grade-btn .gl{font-size:23px;} .grade-btn .gs{font-size:14px;}
+    .grade-group-label{font-size:20px;}
     .word-panel{width:290px;} .word-item{font-size:23px;}
     .letter-box{width:78px;height:94px;font-size:54px;}
     .btn{font-size:23px;padding:12px 25px;min-height:56px;} .score-display{font-size:28px;}
@@ -206,7 +218,7 @@
   <div class="app-title">⭐ SpellStar</div>
   <div class="app-subtitle">Spelling &amp; Writing Adventure!</div>
   <div style="font-size:11px;color:var(--text-dim);margin-top:-12px;cursor:pointer;" onclick="toggleDebugPanel()">v2.0</div>
-  <div class="grade-grid" id="grade-grid"></div>
+  <div class="grade-groups" id="grade-grid"></div>
   <div class="picker-row">
     <span class="picker-label">🔊 Voice:</span>
     <button class="picker-btn active" id="vopt-female" onclick="setGender('female')">👩 Woman</button>
@@ -260,6 +272,7 @@
         <div class="letter-boxes" id="letter-boxes" style="display:none;"></div>
         <div class="challenge-prompt" id="challenge-prompt" style="display:none;">Spell it out! Say each letter...</div>
         <div class="challenge-hint" id="challenge-hint"></div>
+        <button class="btn-replay-spell" id="replay-inside-btn" onclick="replayTeaching()" style="display:none;">🔁 Replay</button>
       </div>
 
       <div class="def-area" id="def-area">
@@ -383,7 +396,16 @@ function pickVoice() {
     state.pitch = state.pickedVoice?.name === 'Samantha' ? 0.1 : 0.8;
   }
 }
-window.setGender = g => { state.gender=g; localStorage.setItem('spellstar_gender',g); pickVoice(); applyGenderUI(); };
+window.setGender = g => {
+  state.gender=g;
+  localStorage.setItem('spellstar_gender',g);
+  pickVoice();
+  applyGenderUI();
+  if (state.phase === 'idle') {
+    const greeting = g === 'female' ? "Hi! I'm your spelling teacher!" : "Hey there! Ready to spell?";
+    setTimeout(() => speak(greeting, 0.9), 100);
+  }
+};
 function applyGenderUI() {
   const f = state.gender==='female';
   ['vopt-female','vtog-female'].forEach(id=>document.getElementById(id)?.classList.toggle('active',f));
@@ -407,25 +429,46 @@ window.setMode = m => { state.mode=m; localStorage.setItem('spellstar_mode',m); 
 window.toggleMode = () => setMode(state.mode==='learn'?'challenge':'learn');
 function applyModeUI() {
   const isL = state.mode==='learn';
-  document.getElementById('mopt-learn')?.classList.toggle('active',isL);
-  document.getElementById('mopt-challenge')?.classList.toggle('active',!isL);
-  // make challenge btn use accent4 style
-  document.getElementById('mopt-learn')?.classList.toggle('active-mode',false);
-  document.getElementById('mopt-challenge')?.classList.toggle('active-mode',!isL);
-  if (!isL) { document.getElementById('mopt-challenge')?.classList.remove('active'); document.getElementById('mopt-challenge')?.classList.add('active-mode'); }
+  document.getElementById('mopt-learn')?.classList.toggle('active', isL);
+  const challengeBtn = document.getElementById('mopt-challenge');
+  if (challengeBtn) {
+    challengeBtn.classList.toggle('active', false);
+    challengeBtn.classList.toggle('active-mode', !isL);
+  }
   const pill = document.getElementById('mode-pill');
   if (pill) { pill.textContent = isL?'📖 Learn':'🎯 Challenge'; pill.classList.toggle('challenge',!isL); }
 }
 
 // ── GRADES ────────────────────────────────────────────────────────────────────
 function buildGradeGrid() {
-  const grid = document.getElementById('grade-grid'); grid.innerHTML='';
-  GRADES.forEach(g => {
-    const btn = document.createElement('button');
-    btn.className = 'grade-btn'+(state.grade===g.id?' selected':'');
-    btn.innerHTML = `<img class="ge" src="${g.img}" alt="${g.label}"><span class="gl">${g.label}</span><span class="gs">${g.age}</span><span class="ga">${g.assist}</span>`;
-    btn.onclick = () => loadGrade(g);
-    grid.appendChild(btn);
+  const container = document.getElementById('grade-grid');
+  container.innerHTML = '';
+
+  const groups = [
+    { key:'parent', label:'With a parent ❤️', grades: GRADES.filter(g => g.assist.includes('parent')) },
+    { key:'solo',   label:'On your own ⭐',   grades: GRADES.filter(g => g.assist.includes('own')) },
+  ];
+
+  groups.forEach(group => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'grade-group';
+    groupEl.innerHTML = `
+      <div class="grade-group-header">
+        <span class="grade-group-label ${group.key}">${group.label}</span>
+        <div class="grade-group-line ${group.key}"></div>
+      </div>
+      <div class="grade-group-cards" id="cards-${group.key}"></div>
+    `;
+    container.appendChild(groupEl);
+
+    const cards = groupEl.querySelector(`#cards-${group.key}`);
+    group.grades.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = 'grade-btn' + (state.grade === g.id ? ' selected' : '');
+      btn.innerHTML = `<img class="ge" src="${g.img}" alt="${g.label}"><span class="gl">${g.label}</span><span class="gs">${g.age}</span>`;
+      btn.onclick = () => loadGrade(g);
+      cards.appendChild(btn);
+    });
   });
 }
 async function loadGrade(g) {
@@ -476,7 +519,11 @@ function checkSpeechSupport() {
   state.speechSupported=!!SR;
   if (!SR) document.getElementById('speech-warning').style.display='block';
 }
-window.toggleMic = () => state.listening ? stopMic() : startMic();
+// New word via mic - shows word panel + starts listening
+window.newWordMic = function() {
+  document.getElementById('word-panel').classList.remove('hidden');
+  startMic();
+};
 function startMic() {
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if (!SR) return;
   state.recognition=new SR(); state.recognition.lang='en-US';
@@ -505,20 +552,26 @@ function resetStage() {
   document.getElementById('cursive-area').style.display='none';
   document.getElementById('def-area').classList.remove('show');
   document.getElementById('word-panel').classList.remove('hidden');
+  const rbi=document.getElementById('replay-inside-btn'); if(rbi) rbi.style.display='none';
   setActionRow('idle');
 }
 
 // ── ACTION ROW ────────────────────────────────────────────────────────────────
 function setActionRow(phase) {
   const row=document.getElementById('action-row'); row.innerHTML='';
+  const rb=document.getElementById('replay-inside-btn'); if(rb) rb.style.display='none';
   if (phase==='idle') {
-    if (state.speechSupported) row.innerHTML=`<button class="btn btn-mic" id="mic-btn" onclick="toggleMic()">🎤 Say a Word</button>`;
+    if (state.speechSupported) row.innerHTML=`<button class="btn btn-mic" id="mic-btn" onclick="newWordMic()">🎤 Say a Word</button>`;
   } else if (phase==='teaching') {
     const lbl = state.mode==='learn' ? 'Next Word ➡' : "I'm Ready to Spell! 🎤";
     const cls = state.mode==='learn' ? 'btn-next' : 'btn-primary';
     const id  = state.mode==='learn' ? 'onclick="nextWord()"' : 'id="ready-btn" onclick="startChallengePhase()"';
-    row.innerHTML=`<button class="btn btn-ghost" onclick="replayTeaching()">🔁 Replay</button><button class="btn ${cls}" ${id}>${lbl}</button>`;
+    // "Say a Word" mic button on left, main action on right
+    const micBtn = state.speechSupported ? `<button class="btn btn-mic" id="mic-btn" onclick="newWordMic()">🎤 Say a Word</button>` : '';
+    row.innerHTML=`${micBtn}<button class="btn ${cls}" ${id}>${lbl}</button>`;
     if (state.mode==='challenge') { const b=document.getElementById('ready-btn'); if(b){b.disabled=true;b.style.opacity='.4';} }
+    // Show replay button inside word display area
+    const rb=document.getElementById('replay-inside-btn'); if(rb) rb.style.display='inline-block';
   } else if (phase==='challenge') {
     row.innerHTML=`<button class="btn btn-mic" id="ch-mic-btn" onclick="toggleChMic()">🎤 Say a Letter</button><button class="btn btn-ghost" onclick="skipChallenge()">Skip ➡</button>`;
   } else if (phase==='complete') {
@@ -692,6 +745,7 @@ function showDefinition(e) {
 // ── PHASE 2: CHALLENGE ────────────────────────────────────────────────────────
 window.startChallengePhase = function() {
   if (!state.currentWord) return;
+  clearInterval(state.spellingInterval);
   state.phase='challenge'; state.chLetterIdx=0; state.chAttempts=0;
   stopCursiveLoop();
   document.getElementById('prompt-text').style.display='none';
