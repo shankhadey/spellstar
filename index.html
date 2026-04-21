@@ -23,14 +23,15 @@
   .app-subtitle{font-size:22px;color:var(--accent3);font-weight:700;}
   .grade-groups{display:flex;flex-direction:row;gap:24px;width:100%;align-items:flex-start;}
   .grade-group{display:flex;flex-direction:column;gap:8px;flex:1;}
-  .grade-group-header{display:flex;align-items:center;gap:10px;}
-  .grade-group-label{font-family:'Fredoka One',cursive;font-size:15px;font-weight:700;white-space:nowrap;}
+  .grade-group-header{display:flex;align-items:center;gap:10px;min-width:0;}
+  .grade-group-label{font-family:'Fredoka One',cursive;font-size:15px;font-weight:700;white-space:nowrap;flex-shrink:0;}
   .grade-group-label.parent{color:#ff9f43;}
   .grade-group-label.solo{color:var(--accent3);}
-  .grade-group-line{flex:1;height:2px;border-radius:2px;opacity:.3;}
+  .grade-group-line{flex:1;min-width:0;height:2px;border-radius:2px;opacity:.3;}
   .grade-group-line.parent{background:#ff9f43;}
   .grade-group-line.solo{background:var(--accent3);}
   .grade-group-cards{display:flex;gap:8px;flex-wrap:wrap;}
+  .grade-pickers{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:10px;}
   .grade-btn{background:var(--surface);border:3px solid transparent;border-radius:var(--radius);padding:12px 8px;cursor:pointer;transition:all .2s;text-align:center;flex:1;min-width:80px;max-width:140px;}
   .grade-btn:hover,.grade-btn:focus{border-color:var(--accent);transform:scale(1.06);background:var(--surface2);box-shadow:0 0 24px rgba(247,201,72,.3);outline:none;}
   .grade-btn.selected{border-color:var(--accent3);background:rgba(78,205,196,.15);box-shadow:0 0 24px rgba(78,205,196,.4);}
@@ -220,15 +221,17 @@
   <div class="app-subtitle">Spelling &amp; Writing Adventure!</div>
   <div style="font-size:11px;color:var(--text-dim);margin-top:-12px;cursor:pointer;" onclick="toggleDebugPanel()">v2.0</div>
   <div class="grade-groups" id="grade-grid"></div>
-  <div class="picker-row">
-    <span class="picker-label">🔊 Voice:</span>
-    <button class="picker-btn active" id="vopt-female" onclick="setGender('female')">👩 Woman</button>
-    <button class="picker-btn" id="vopt-male" onclick="setGender('male')">👨 Man</button>
-  </div>
-  <div class="picker-row">
-    <span class="picker-label">Mode:</span>
-    <button class="picker-btn active" id="mopt-learn" onclick="setMode('learn')">📖 Learn</button>
-    <button class="picker-btn" id="mopt-challenge" onclick="setMode('challenge')">🎯 Challenge</button>
+  <div class="grade-pickers">
+    <div class="picker-row">
+      <span class="picker-label">🔊 Voice:</span>
+      <button class="picker-btn active" id="vopt-female" onclick="setGender('female')">👩 Woman</button>
+      <button class="picker-btn" id="vopt-male" onclick="setGender('male')">👨 Man</button>
+    </div>
+    <div class="picker-row">
+      <span class="picker-label">Mode:</span>
+      <button class="picker-btn active" id="mopt-learn" onclick="setMode('learn')">📖 Learn</button>
+      <button class="picker-btn" id="mopt-challenge" onclick="setMode('challenge')">🎯 Challenge</button>
+    </div>
   </div>
 </div>
 
