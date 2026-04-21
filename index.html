@@ -324,15 +324,15 @@ const NOVELTY_VOICES = ['Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Go
 
 // What speech recognition might return for each letter
 const LETTER_SOUNDS = {
-  a:['ay','a','aye'],        b:['bee','be','b'],        c:['see','sea','c','si'],
-  d:['dee','d','de'],        e:['ee','e','ea'],          f:['ef','eff','f'],
-  g:['jee','gee','g','je'],  h:['aych','haitch','h'],   i:['eye','i','aye'],
-  j:['jay','j','jae'],       k:['kay','k','kae'],        l:['el','l','ell'],
-  m:['em','m'],              n:['en','n'],                o:['oh','o','owe'],
-  p:['pee','p','pe'],        q:['kyoo','q','cue','kyu'], r:['ar','r'],
-  s:['es','s','ess'],        t:['tee','t','te'],          u:['yoo','u','you'],
+  a:['ay','a','aye', 'hey'], b:['bee','be','b'],                            c:['see','sea','c','si', 'she'],
+  d:['dee','d','de'],        e:['ee','e','ea', 'ee'],                       f:['ef','eff','f'],
+  g:['jee','gee','g','je'],  h:['aych','haitch','h'],                       i:['eye','i','aye', 'eye'],
+  j:['jay','j','jae'],       k:['kay','k','kae','okay'],                    l:['el','l','ell'],
+  m:['em','m', 'am'],        n:['en','n', 'and'],                           o:['oh','o','owe'],
+  p:['pee','p','pe'],        q:['kyoo','q','cue','kyu'],                    r:['ar','r', 'arr', 'are'],
+  s:['es','s','ess'],        t:['tee','t','te'],                            u:['yoo','u','you', 'view'],
   v:['vee','v','ve'],        w:['double yoo','w','double u','doubleyoo'],
-  x:['ex','x'],              y:['why','y','wi'],           z:['zee','z','ze','zed'],
+  x:['ex','x'],              y:['why','y','wi'],                            z:['zee','z','ze','zed', 'the'],
 };
 
 // ── STATE ────────────────────────────────────────────────────────────────────
@@ -774,7 +774,7 @@ window.skipChallenge = function() {
 
 window.toggleChMic = ()=>state.chListening?stopChMic():startChMic();
 
-function startChMic() {
+/*function startChMic() {
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if (!SR||state.phase!=='challenge') return;
   state.chRecognition=new SR();
@@ -787,6 +787,93 @@ function startChMic() {
   state.chRecognition.onerror=(e)=>{ console.log('[Ch err]',e.error); stopChMic(); if(state.phase==='challenge') setTimeout(()=>startChMic(),400); };
   state.chRecognition.onend=()=>{ stopChMic(); if(state.phase==='challenge'&&state.chLetterIdx<(state.currentWord?.length||0)) setTimeout(()=>startChMic(),300); };
   try{state.chRecognition.start();}catch(e){}
+} */
+function startChMic() {
+  if (!state.speechSupported || state.chListening) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  state.chRecognition = new SR();
+  state.chRecognition.continuous = true; // Key change
+  state.chRecognition.interimResults = true; // Allows real-time matching
+  state.chRecognition.lang = 'en-US';
+
+  state.chRecognition.onstart = () => {
+    state.chListening = true;
+    updateVoiceStatus('Listening...', true);
+    document.getElementById('mic-btn-ch').classList.add('listening');
+  };
+
+  state.chRecognition.onresult = (e) => {
+    // Grab the latest chunk of recognized speech
+    let transcript = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript.toLowerCase();
+    }
+    
+    // Send to our new stream processor
+    processSpellingStream(transcript);
+  };
+
+  state.chRecognition.onerror = (e) => {
+    console.error('[CH MIC]', e.error);
+    stopChMic();
+  };
+
+  state.chRecognition.onend = () => {
+    // If we haven't finished the word, restart automatically to keep the "Hot Mic"
+    if (state.phase === 'challenge' && state.chLetterIdx < state.currentWord.length) {
+      try { state.chRecognition.start(); } catch(err) {}
+    } else {
+      stopChMic();
+    }
+  };
+
+  state.chRecognition.start();
+}
+
+function processSpellingStream(transcript) {
+  if (state.phase !== 'challenge') return;
+  
+  const targetWord = state.currentWord.toLowerCase();
+  const nextLetter = targetWord[state.chLetterIdx];
+  const acceptable = LETTER_SOUNDS[nextLetter] || [nextLetter];
+
+  // Check if the current speech chunk contains the sound we need
+  const isMatch = acceptable.some(s => transcript.includes(s));
+
+  if (isMatch) {
+    // Trigger the "Correct" logic from your existing code
+    handleCorrectLetterMatch();
+    
+    // If they spelled it fast, check the REST of the transcript
+    // for the NEXT letter immediately.
+    const remainingTranscript = transcript.split(nextLetter).pop();
+    if (remainingTranscript && state.chLetterIdx < targetWord.length) {
+      processSpellingStream(remainingTranscript);
+    }
+  }
+}
+
+// Helper to bridge to existing success logic
+function handleCorrectLetterMatch() {
+  const boxes = document.getElementById('letter-boxes').children;
+  const box = boxes[state.chLetterIdx];
+  if (box) {
+    box.textContent = state.currentWord[state.chLetterIdx].toUpperCase();
+    box.classList.remove('ch-hidden');
+    box.classList.add('ch-correct');
+  }
+
+  state.chLetterIdx++;
+  state.chAttempts = 0; // Reset frustration counter
+
+  if (state.chLetterIdx >= state.currentWord.length) {
+    completeChallengePhase();
+  } else {
+    // Encouragement without stopping the flow
+    const feedback = ["Good!", "Nice!", "Keep going!", "Great!"];
+    const msg = feedback[Math.floor(Math.random() * feedback.length)];
+    document.getElementById('challenge-hint').textContent = msg;
+  }
 }
 
 function stopChMic() {
