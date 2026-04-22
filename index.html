@@ -841,7 +841,7 @@ function processSpellingStream(transcript) {
   const isMatch = acceptable.some(s => transcript.includes(s));
 
   if (isMatch) {
-    // Trigger the "Correct" logic from your existing code
+    // Trigger the "Correct" letter logic
     handleCorrectLetterMatch();
     
     // If they spelled it fast, check the REST of the transcript
@@ -867,7 +867,7 @@ function handleCorrectLetterMatch() {
   state.chAttempts = 0; // Reset frustration counter
 
   if (state.chLetterIdx >= state.currentWord.length) {
-    completeChallengePhase();
+    setTimeout(()=>completeChallengePhase(true),500);
   } else {
     // Encouragement without stopping the flow
     const feedback = ["Good!", "Nice!", "Keep going!", "Great!"];
