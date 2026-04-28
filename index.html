@@ -139,6 +139,18 @@
   .voice-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);animation:vp .6s ease-in-out infinite alternate;}
   @keyframes vp{from{transform:scale(1);opacity:.5}to{transform:scale(1.6);opacity:1}}
   .speech-warning{background:rgba(255,107,107,.12);border:2px solid var(--accent2);border-radius:10px;padding:8px 16px;font-size:14px;color:var(--accent2);font-weight:700;text-align:center;}
+  /* Big mic listening indicator */
+  #listening-overlay{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(200,30,30,.95);border-radius:50px;padding:12px 32px;display:none;align-items:center;gap:12px;box-shadow:0 0 40px rgba(255,50,50,.5);}
+  #listening-overlay.show{display:flex;}
+  #listening-overlay .lo-text{font-family:'Fredoka One',cursive;font-size:22px;color:#fff;}
+  #listening-overlay .lo-bars{display:flex;gap:4px;align-items:center;height:28px;}
+  #listening-overlay .lo-bar{width:5px;background:rgba(255,255,255,.9);border-radius:3px;animation:bar-bounce .5s ease-in-out infinite alternate;}
+  #listening-overlay .lo-bar:nth-child(1){animation-delay:0s;}
+  #listening-overlay .lo-bar:nth-child(2){animation-delay:.1s;}
+  #listening-overlay .lo-bar:nth-child(3){animation-delay:.2s;}
+  #listening-overlay .lo-bar:nth-child(4){animation-delay:.1s;}
+  #listening-overlay .lo-bar:nth-child(5){animation-delay:0s;}
+  @keyframes bar-bounce{from{height:6px}to{height:26px}}
 
   /* Celebration */
   #celebration{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(13,13,26,.85);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s;}
@@ -300,6 +312,14 @@
   </div>
 </div>
 
+<div id="listening-overlay">
+  <div class="lo-bars">
+    <div class="lo-bar"></div><div class="lo-bar"></div><div class="lo-bar"></div>
+    <div class="lo-bar"></div><div class="lo-bar"></div>
+  </div>
+  <div class="lo-text">🎤 Listening...</div>
+</div>
+
 <div id="debug-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(0,0,0,.92);color:#0f0;font-family:monospace;font-size:12px;padding:10px;max-height:40vh;overflow-y:auto;"></div>
 
 <div id="celebration">
@@ -324,15 +344,15 @@ const NOVELTY_VOICES = ['Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Go
 
 // What speech recognition might return for each letter
 const LETTER_SOUNDS = {
-  a:['ay','a','aye', 'hey'], b:['bee','be','b'],                            c:['see','sea','c','si', 'she'],
-  d:['dee','d','de'],        e:['ee','e','ea', 'ee'],                       f:['ef','eff','f'],
-  g:['jee','gee','g','je'],  h:['aych','haitch','h'],                       i:['eye','i','aye', 'eye'],
-  j:['jay','j','jae'],       k:['kay','k','kae','okay'],                    l:['el','l','ell'],
-  m:['em','m', 'am'],        n:['en','n', 'and'],                           o:['oh','o','owe'],
-  p:['pee','p','pe'],        q:['kyoo','q','cue','kyu'],                    r:['ar','r', 'arr', 'are'],
-  s:['es','s','ess'],        t:['tee','t','te'],                            u:['yoo','u','you', 'view'],
-  v:['vee','v','ve'],        w:['double yoo','w','double u','doubleyoo'],
-  x:['ex','x'],              y:['why','y','wi'],                            z:['zee','z','ze','zed', 'the'],
+  a:['ay','a','aye'],          b:['bee','be','b'],                            c:['see','sea','c','si'],
+  d:['dee','d','de'],          e:['ee','e','ea'],                             f:['ef','eff','f'],
+  g:['jee','gee','g','je'],    h:['aych','haitch','h'],                       i:['eye','i','aye'],
+  j:['jay','j','jae'],         k:['kay','k','kae'],                           l:['el','l','ell'],
+  m:['em','m'],                n:['en','n'],                                   o:['oh','o','owe'],
+  p:['pee','p','pe'],          q:['kyoo','q','cue','kyu'],                    r:['ar','r','arr'],
+  s:['es','s','ess'],          t:['tee','t','te'],                            u:['yoo','u','you'],
+  v:['vee','v','ve'],          w:['double yoo','w','double u','doubleyoo'],
+  x:['ex','x'],                y:['why','y','wi'],                            z:['zee','z','ze','zed'],
 };
 
 // ── STATE ────────────────────────────────────────────────────────────────────
@@ -441,6 +461,10 @@ function applyModeUI() {
   }
   const pill = document.getElementById('mode-pill');
   if (pill) { pill.textContent = isL?'📖 Learn':'🎯 Challenge'; pill.classList.toggle('challenge',!isL); }
+  // Refresh action row immediately if on main screen
+  if (document.getElementById('screen-main')?.classList.contains('active')) {
+    setActionRow(state.phase);
+  }
 }
 
 // ── GRADES ────────────────────────────────────────────────────────────────────
@@ -523,8 +547,20 @@ function checkSpeechSupport() {
   state.speechSupported=!!SR;
   if (!SR) document.getElementById('speech-warning').style.display='block';
 }
-// New word via mic - shows word panel + starts listening
+// New word via mic - clears stage and starts listening
 window.newWordMic = function() {
+  // Reset stage to placeholder state so screen is clean while listening
+  stopCursiveLoop();
+  clearInterval(state.spellingInterval);
+  document.getElementById('placeholder').style.display='flex';
+  document.getElementById('prompt-text').style.display='none';
+  document.getElementById('letter-boxes').style.display='none';
+  document.getElementById('challenge-prompt').style.display='none';
+  document.getElementById('challenge-hint').textContent='';
+  document.getElementById('cursive-area').style.display='none';
+  document.getElementById('def-area').classList.remove('show');
+  const rbi = document.getElementById('replay-inside-btn');
+  if (rbi) rbi.style.display='none';
   document.getElementById('word-panel').classList.remove('hidden');
   startMic();
 };
@@ -579,7 +615,7 @@ function setActionRow(phase) {
   } else if (phase==='challenge') {
     row.innerHTML=`<button class="btn btn-mic" id="ch-mic-btn" onclick="toggleChMic()">🎤 Say a Letter</button><button class="btn btn-ghost" onclick="skipChallenge()">Skip ➡</button>`;
   } else if (phase==='complete') {
-    row.innerHTML=`<button class="btn btn-write" onclick="showCursiveReward()">✍️ Write It</button><button class="btn btn-next" onclick="nextWord()">Next Word ➡</button>`;
+    row.innerHTML=`<button class="btn btn-next" onclick="nextWord()">Next Word ➡</button>`;
   }
 }
 
@@ -631,9 +667,11 @@ function startTeachingPhase(word) {
 }
 
 function runKaraokePass(word, boxes, letters, onDone) {
-  speak(word, 0.7);
+  // No word announcement here - already spoken in first pass
+  // Per-letter timing matches the first pass (750ms) - never faster
+  // For very short words we slow down slightly for clarity
   boxes.forEach(b=>b.classList.remove('karaoke'));
-  const perLetter=Math.max(450, Math.min(850, 2800/letters.length));
+  const perLetter = Math.max(750, Math.min(1000, 4000/letters.length));
   let i=0;
   setTimeout(()=>{
     const ki=setInterval(()=>{
@@ -644,17 +682,42 @@ function runKaraokePass(word, boxes, letters, onDone) {
         setTimeout(()=>{ speak(word,0.85); if(onDone) onDone(); }, 350);
       }
     }, perLetter);
-  }, 700);
+  }, 400);
 }
 
 window.replayTeaching = function() {
   if (!state.currentWord) return;
-  document.querySelectorAll('.letter-box').forEach(b=>b.classList.remove('revealed','karaoke'));
-  const btn=document.getElementById('ready-btn'); if(btn){btn.disabled=true;btn.style.opacity='.4';}
-  stopCursiveLoop();
-  document.getElementById('cursive-area').style.display='none';
-  document.getElementById('def-area').classList.remove('show');
-  startTeachingPhase(state.currentWord);
+  // Only re-run TTS - don't rebuild the screen
+  const word = state.currentWord;
+  const letters = word.split('');
+  const boxes = document.querySelectorAll('.letter-box');
+
+  // Reset visual state of boxes only
+  boxes.forEach(b => b.classList.remove('revealed','karaoke'));
+
+  // Disable ready button during replay
+  const btn = document.getElementById('ready-btn');
+  if (btn) { btn.disabled=true; btn.style.opacity='.4'; }
+
+  // Re-run TTS sequence: announce word → reveal letters → karaoke
+  speak(word, 0.85);
+  let i = 0;
+  clearInterval(state.spellingInterval);
+  setTimeout(() => {
+    state.spellingInterval = setInterval(() => {
+      if (i < letters.length) {
+        boxes[i].classList.add('revealed');
+        speak(letters[i], 0.8);
+        i++;
+      } else {
+        clearInterval(state.spellingInterval);
+        setTimeout(() => runKaraokePass(word, boxes, letters, () => {
+          const btn = document.getElementById('ready-btn');
+          if (btn) { btn.disabled=false; btn.style.opacity='1'; }
+        }), 400);
+      }
+    }, 750);
+  }, 1300);
 };
 
 // ── CURSIVE LOOP ──────────────────────────────────────────────────────────────
@@ -774,53 +837,47 @@ window.skipChallenge = function() {
 
 window.toggleChMic = ()=>state.chListening?stopChMic():startChMic();
 
-/*function startChMic() {
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if (!SR||state.phase!=='challenge') return;
-  state.chRecognition=new SR();
-  state.chRecognition.lang='en-US'; state.chRecognition.interimResults=false; state.chRecognition.maxAlternatives=5;
-  state.chRecognition.onstart=()=>{ state.chListening=true; const b=document.getElementById('ch-mic-btn'); if(b){b.classList.add('listening');b.textContent='🔴 Listening...';} };
-  state.chRecognition.onresult=(e)=>{
-    const ts=[]; for(let r=0;r<e.results.length;r++) for(let a=0;a<e.results[r].length;a++) ts.push(e.results[r][a].transcript.trim().toLowerCase());
-    console.log('[Ch] heard:',ts); processLetterAttempt(ts);
-  };
-  state.chRecognition.onerror=(e)=>{ console.log('[Ch err]',e.error); stopChMic(); if(state.phase==='challenge') setTimeout(()=>startChMic(),400); };
-  state.chRecognition.onend=()=>{ stopChMic(); if(state.phase==='challenge'&&state.chLetterIdx<(state.currentWord?.length||0)) setTimeout(()=>startChMic(),300); };
-  try{state.chRecognition.start();}catch(e){}
-} */
+function showListeningOverlay(show) {
+  const el = document.getElementById('listening-overlay');
+  if (show) el.classList.add('show'); else el.classList.remove('show');
+}
+
 function startChMic() {
   if (!state.speechSupported || state.chListening) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   state.chRecognition = new SR();
-  state.chRecognition.continuous = true; // Key change
-  state.chRecognition.interimResults = true; // Allows real-time matching
+  state.chRecognition.continuous = true;
+  state.chRecognition.interimResults = true;
   state.chRecognition.lang = 'en-US';
 
   state.chRecognition.onstart = () => {
     state.chListening = true;
-    updateVoiceStatus('Listening...', true);
-    document.getElementById('mic-btn-ch').classList.add('listening');
+    showListeningOverlay(true);
+    const b = document.getElementById('ch-mic-btn');
+    if (b) { b.classList.add('listening'); b.textContent = '🔴 Listening...'; }
   };
 
   state.chRecognition.onresult = (e) => {
-    // Grab the latest chunk of recognized speech
-    let transcript = "";
+    let transcript = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      transcript += e.results[i][0].transcript.toLowerCase();
+      transcript += e.results[i][0].transcript.toLowerCase().trim();
     }
-    
-    // Send to our new stream processor
     processSpellingStream(transcript);
   };
 
   state.chRecognition.onerror = (e) => {
     console.error('[CH MIC]', e.error);
-    stopChMic();
+    // On no-speech, just restart - don't stop
+    if (e.error === 'no-speech' && state.phase === 'challenge') {
+      try { state.chRecognition.start(); } catch(err) {}
+    } else {
+      stopChMic();
+    }
   };
 
   state.chRecognition.onend = () => {
-    // If we haven't finished the word, restart automatically to keep the "Hot Mic"
-    if (state.phase === 'challenge' && state.chLetterIdx < state.currentWord.length) {
+    if (state.phase === 'challenge' && state.chLetterIdx < (state.currentWord?.length || 0)) {
+      // Keep mic hot - restart immediately
       try { state.chRecognition.start(); } catch(err) {}
     } else {
       stopChMic();
@@ -832,53 +889,42 @@ function startChMic() {
 
 function processSpellingStream(transcript) {
   if (state.phase !== 'challenge') return;
-  
   const targetWord = state.currentWord.toLowerCase();
   const nextLetter = targetWord[state.chLetterIdx];
+  if (!nextLetter) return;
   const acceptable = LETTER_SOUNDS[nextLetter] || [nextLetter];
 
-  // Check if the current speech chunk contains the sound we need
-  const isMatch = acceptable.some(s => transcript.includes(s));
+  // Tighter matching - split into words and check each one
+  const words = transcript.trim().split(/\s+/);
+  const isMatch = words.some(w => acceptable.some(s => w === s || w === nextLetter));
 
   if (isMatch) {
-    // Trigger the "Correct" letter logic
     handleCorrectLetterMatch();
-    
-    // If they spelled it fast, check the REST of the transcript
-    // for the NEXT letter immediately.
-    const remainingTranscript = transcript.split(nextLetter).pop();
-    if (remainingTranscript && state.chLetterIdx < targetWord.length) {
-      processSpellingStream(remainingTranscript);
-    }
   }
 }
 
-// Helper to bridge to existing success logic
 function handleCorrectLetterMatch() {
   const boxes = document.getElementById('letter-boxes').children;
   const box = boxes[state.chLetterIdx];
   if (box) {
-    box.textContent = state.currentWord[state.chLetterIdx].toUpperCase();
-    box.classList.remove('ch-hidden');
+    box.textContent = state.currentWord[state.chLetterIdx];
+    box.classList.remove('ch-hidden','shake');
     box.classList.add('ch-correct');
   }
-
   state.chLetterIdx++;
-  state.chAttempts = 0; // Reset frustration counter
-
+  state.chAttempts = 0;
+  document.getElementById('challenge-hint').textContent = '';
   if (state.chLetterIdx >= state.currentWord.length) {
-    setTimeout(()=>completeChallengePhase(true),500);
-  } else {
-    // Encouragement without stopping the flow
-    const feedback = ["Good!", "Nice!", "Keep going!", "Great!"];
-    const msg = feedback[Math.floor(Math.random() * feedback.length)];
-    document.getElementById('challenge-hint').textContent = msg;
+    setTimeout(() => completeChallengePhase(true), 500);
   }
 }
 
 function stopChMic() {
-  state.chListening=false; try{state.chRecognition?.stop();}catch(e){}
-  const b=document.getElementById('ch-mic-btn'); if(b){b.classList.remove('listening');b.textContent='🎤 Say a Letter';}
+  state.chListening = false;
+  try { state.chRecognition?.stop(); } catch(e) {}
+  showListeningOverlay(false);
+  const b = document.getElementById('ch-mic-btn');
+  if (b) { b.classList.remove('listening'); b.textContent = '🎤 Say a Letter'; }
 }
 
 function processLetterAttempt(transcripts) {
@@ -951,7 +997,7 @@ window.nextWord = function() {
   const avail=state.filtered.filter(w=>w!==state.currentWord); if(!avail.length) return;
   const word=avail[Math.floor(Math.random()*avail.length)];
   state.currentWord=word; stopCursiveLoop();
-  document.getElementById('word-panel').classList.add('hidden');
+  // Keep word panel visible so parent/kid can browse if they want
   startTeachingPhase(word);
 };
 
