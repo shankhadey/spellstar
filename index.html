@@ -366,7 +366,7 @@ const state = {
   phase:  'idle', // idle | teaching | challenge | complete
   spellingInterval: null,
   cursiveAnim: null, cursiveLooping: false,
-  chLetterIdx: 0, chAttempts: 0,
+  chLetterIdx: 0,
   chRecognition: null, chListening: false,
   recognition: null, listening: false,
   speechSupported: false,
@@ -435,14 +435,13 @@ function applyGenderUI() {
   ['vopt-female','vtog-female'].forEach(id=>document.getElementById(id)?.classList.toggle('active',f));
   ['vopt-male','vtog-male'].forEach(id=>document.getElementById(id)?.classList.toggle('active',!f));
 }
-function speak(text, rate=1, onEnd=null) {
+function speak(text, rate=1) {
   if (!window.speechSynthesis) return;
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang='en-US'; u.rate=rate; u.pitch=state.pitch; u.volume=1;
     if (state.pickedVoice) u.voice=state.pickedVoice;
-    if (onEnd) u.onend=onEnd;
     u.onerror=e=>console.log('[TTS]',e.error,text.slice(0,20));
     window.speechSynthesis.speak(u);
   } catch(e) {}
@@ -613,7 +612,7 @@ function setActionRow(phase) {
     // Show replay button inside word display area
     const rb=document.getElementById('replay-inside-btn'); if(rb) rb.style.display='inline-block';
   } else if (phase==='challenge') {
-    row.innerHTML=`<button class="btn btn-mic" id="ch-mic-btn" onclick="toggleChMic()">🎤 Say a Letter</button><button class="btn btn-ghost" onclick="skipChallenge()">Skip ➡</button>`;
+    row.innerHTML=`<button class="btn btn-ghost" onclick="skipChallenge()">Skip ➡</button>`;
   } else if (phase==='complete') {
     row.innerHTML=`<button class="btn btn-next" onclick="nextWord()">Next Word ➡</button>`;
   }
@@ -687,7 +686,7 @@ function runKaraokePass(word, boxes, letters, onDone) {
 
 window.replayTeaching = function() {
   if (!state.currentWord) return;
-  // Only re-run TTS - don't rebuild the screen
+  stopChMic(); // stop challenge mic if somehow running
   const word = state.currentWord;
   const letters = word.split('');
   const boxes = document.querySelectorAll('.letter-box');
@@ -726,11 +725,6 @@ function stopCursiveLoop() {
   state.cursiveLooping=false;
   if (state.cursiveAnim){cancelAnimationFrame(state.cursiveAnim);state.cursiveAnim=null;}
 }
-window.showCursiveReward = function() {
-  if (!state.currentWord) return;
-  document.getElementById('cursive-area').style.display='flex';
-  startCursiveLoop(state.currentWord);
-};
 
 function animateCursiveWord(word) {
   const canvas=document.getElementById('cursive-canvas');
@@ -813,7 +807,7 @@ function showDefinition(e) {
 window.startChallengePhase = function() {
   if (!state.currentWord) return;
   clearInterval(state.spellingInterval);
-  state.phase='challenge'; state.chLetterIdx=0; state.chAttempts=0;
+  state.phase='challenge'; state.chLetterIdx=0;
   stopCursiveLoop();
   document.getElementById('prompt-text').style.display='none';
   document.getElementById('challenge-prompt').style.display='block';
@@ -912,7 +906,6 @@ function handleCorrectLetterMatch() {
     box.classList.add('ch-correct');
   }
   state.chLetterIdx++;
-  state.chAttempts = 0;
   document.getElementById('challenge-hint').textContent = '';
   if (state.chLetterIdx >= state.currentWord.length) {
     setTimeout(() => completeChallengePhase(true), 500);
@@ -925,37 +918,6 @@ function stopChMic() {
   showListeningOverlay(false);
   const b = document.getElementById('ch-mic-btn');
   if (b) { b.classList.remove('listening'); b.textContent = '🎤 Say a Letter'; }
-}
-
-function processLetterAttempt(transcripts) {
-  const word=state.currentWord; if(!word||state.phase!=='challenge') return;
-  const idx=state.chLetterIdx; if(idx>=word.length) return;
-  const target=word[idx].toLowerCase();
-  const validSounds=LETTER_SOUNDS[target]||[target];
-  const matched=transcripts.some(t=>{
-    const c=t.toLowerCase().trim();
-    return validSounds.some(v=>c===v||c===target||c.startsWith(v+' ')||v.startsWith(c));
-  });
-  const boxes=document.querySelectorAll('.letter-box');
-
-  if (matched) {
-    state.chAttempts=0;
-    boxes[idx].textContent=target; boxes[idx].classList.remove('ch-hidden','shake'); boxes[idx].classList.add('ch-correct');
-    state.chLetterIdx++;
-    document.getElementById('challenge-hint').textContent='';
-    if (state.chLetterIdx>=word.length) { setTimeout(()=>completeChallengePhase(true),500); }
-  } else {
-    state.chAttempts++;
-    boxes[idx].classList.add('shake'); setTimeout(()=>boxes[idx]?.classList.remove('shake'),400);
-    if (state.chAttempts>=2) {
-      document.getElementById('challenge-hint').textContent='';
-      boxes[idx].textContent=target; boxes[idx].classList.remove('ch-hidden','shake'); boxes[idx].classList.add('ch-shown');
-      state.chAttempts=0; state.chLetterIdx++;
-      if (state.chLetterIdx>=word.length) { setTimeout(()=>completeChallengePhase(false),500); }
-    } else {
-      document.getElementById('challenge-hint').textContent=`The letter is "${target.toUpperCase()}" — try again!`;
-    }
-  }
 }
 
 function completeChallengePhase(allCorrect) {
