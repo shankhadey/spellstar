@@ -840,56 +840,63 @@ function showListeningOverlay(show) {
 
 function startChMic() {
   if (!state.speechSupported || state.phase !== 'challenge') return;
-  // Don't double-start
   if (state.chListening) return;
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  try { state.chRecognition?.stop(); } catch(e) {}
+  try { state.chRecognition?.abort(); } catch(e) {}
+
   state.chRecognition = new SR();
   state.chRecognition.continuous = true;
   state.chRecognition.interimResults = true;
+  state.chRecognition.maxAlternatives = 3;
   state.chRecognition.lang = 'en-US';
 
   state.chRecognition.onstart = () => {
     state.chListening = true;
     showListeningOverlay(true);
-    const b = document.getElementById('ch-mic-btn');
-    if (b) { b.classList.add('listening'); b.textContent = '🔴 Listening...'; }
+    console.log('[MIC] started, expecting letter:', state.currentWord?.[state.chLetterIdx]);
   };
 
   state.chRecognition.onresult = (e) => {
-    let transcript = '';
+    // Collect ALL alternatives from ALL results in this event
+    const transcripts = new Set();
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      transcript += e.results[i][0].transcript.toLowerCase().trim();
+      for (let a = 0; a < e.results[i].length; a++) {
+        const t = e.results[i][a].transcript.toLowerCase().trim();
+        if (t) transcripts.add(t);
+      }
     }
-    processSpellingStream(transcript);
+    const combined = [...transcripts].join(' ');
+    console.log('[MIC] result:', combined);
+    processSpellingStream(combined);
   };
 
   state.chRecognition.onerror = (e) => {
-    console.log('[CH MIC error]', e.error);
-    // no-speech is normal - don't treat as failure, just restart
+    console.log('[MIC] error:', e.error);
     state.chListening = false;
+    showListeningOverlay(false);
+    if (e.error === 'aborted') return; // intentional stop, don't restart
     if (state.phase === 'challenge') {
       clearTimeout(state.chMicRestartTimer);
-      state.chMicRestartTimer = setTimeout(() => startChMic(), 150);
+      state.chMicRestartTimer = setTimeout(() => startChMic(), 300);
     }
   };
 
   state.chRecognition.onend = () => {
+    console.log('[MIC] ended, phase:', state.phase, 'letterIdx:', state.chLetterIdx);
     state.chListening = false;
+    showListeningOverlay(false);
     if (state.phase === 'challenge' && state.chLetterIdx < (state.currentWord?.length || 0)) {
-      // Restart immediately to minimize the gap
       clearTimeout(state.chMicRestartTimer);
-      state.chMicRestartTimer = setTimeout(() => startChMic(), 100);
-    } else {
-      stopChMic();
+      state.chMicRestartTimer = setTimeout(() => startChMic(), 200);
     }
   };
 
   try {
     state.chRecognition.start();
+    console.log('[MIC] start called');
   } catch(e) {
-    console.log('[CH MIC start error]', e);
+    console.log('[MIC] start exception:', e.message);
     state.chListening = false;
   }
 }
@@ -956,10 +963,9 @@ function handleCorrectLetterMatch() {
 function stopChMic() {
   state.chListening = false;
   clearTimeout(state.chMicRestartTimer);
-  try { state.chRecognition?.stop(); } catch(e) {}
   showListeningOverlay(false);
-  const b = document.getElementById('ch-mic-btn');
-  if (b) { b.classList.remove('listening'); b.textContent = '🎤 Say a Letter'; }
+  try { state.chRecognition?.abort(); } catch(e) {}
+  console.log('[MIC] stopped');
 }
 
 function completeChallengePhase(allCorrect) {
