@@ -367,6 +367,7 @@ const state = {
   spellingInterval: null,
   cursiveAnim: null, cursiveLooping: false,
   chLetterIdx: 0,
+  chMicRestartTimer: null,
   chRecognition: null, chListening: false,
   recognition: null, listening: false,
   speechSupported: false,
@@ -614,7 +615,8 @@ function setActionRow(phase) {
   } else if (phase==='challenge') {
     row.innerHTML=`<button class="btn btn-ghost" onclick="skipChallenge()">Skip ➡</button>`;
   } else if (phase==='complete') {
-    row.innerHTML=`<button class="btn btn-next" onclick="nextWord()">Next Word ➡</button>`;
+    const micBtn = state.speechSupported ? `<button class="btn btn-mic" id="mic-btn" onclick="newWordMic()">🎤 Say a Word</button>` : '';
+    row.innerHTML=`${micBtn}<button class="btn btn-next" onclick="nextWord()">Next Word ➡</button>`;
   }
 }
 
@@ -837,8 +839,12 @@ function showListeningOverlay(show) {
 }
 
 function startChMic() {
-  if (!state.speechSupported || state.chListening) return;
+  if (!state.speechSupported || state.phase !== 'challenge') return;
+  // Don't double-start
+  if (state.chListening) return;
+
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  try { state.chRecognition?.stop(); } catch(e) {}
   state.chRecognition = new SR();
   state.chRecognition.continuous = true;
   state.chRecognition.interimResults = true;
@@ -860,26 +866,48 @@ function startChMic() {
   };
 
   state.chRecognition.onerror = (e) => {
-    console.error('[CH MIC]', e.error);
-    // On no-speech, just restart - don't stop
-    if (e.error === 'no-speech' && state.phase === 'challenge') {
-      try { state.chRecognition.start(); } catch(err) {}
-    } else {
-      stopChMic();
+    console.log('[CH MIC error]', e.error);
+    // no-speech is normal - don't treat as failure, just restart
+    state.chListening = false;
+    if (state.phase === 'challenge') {
+      clearTimeout(state.chMicRestartTimer);
+      state.chMicRestartTimer = setTimeout(() => startChMic(), 150);
     }
   };
 
   state.chRecognition.onend = () => {
+    state.chListening = false;
     if (state.phase === 'challenge' && state.chLetterIdx < (state.currentWord?.length || 0)) {
-      // Keep mic hot - restart immediately
-      try { state.chRecognition.start(); } catch(err) {}
+      // Restart immediately to minimize the gap
+      clearTimeout(state.chMicRestartTimer);
+      state.chMicRestartTimer = setTimeout(() => startChMic(), 100);
     } else {
       stopChMic();
     }
   };
 
-  state.chRecognition.start();
+  try {
+    state.chRecognition.start();
+  } catch(e) {
+    console.log('[CH MIC start error]', e);
+    state.chListening = false;
+  }
 }
+
+// Restart mic when user returns to the tab
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.phase === 'challenge') {
+    console.log('[SpellStar] Tab visible - restarting challenge mic');
+    state.chListening = false;
+    clearTimeout(state.chMicRestartTimer);
+    startChMic();
+  } else if (document.visibilityState === 'hidden') {
+    // Stop cleanly when leaving - will restart on return
+    try { state.chRecognition?.stop(); } catch(e) {}
+    state.chListening = false;
+    showListeningOverlay(false);
+  }
+});
 
 function processSpellingStream(transcript) {
   if (state.phase !== 'challenge') return;
@@ -914,6 +942,7 @@ function handleCorrectLetterMatch() {
 
 function stopChMic() {
   state.chListening = false;
+  clearTimeout(state.chMicRestartTimer);
   try { state.chRecognition?.stop(); } catch(e) {}
   showListeningOverlay(false);
   const b = document.getElementById('ch-mic-btn');
