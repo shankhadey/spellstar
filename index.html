@@ -851,14 +851,15 @@ function startChMic() {
   state.chRecognition.maxAlternatives = 3;
   state.chRecognition.lang = 'en-US';
 
+  const sessionStart = Date.now();
+
   state.chRecognition.onstart = () => {
     state.chListening = true;
     showListeningOverlay(true);
-    console.log('[MIC] started, expecting letter:', state.currentWord?.[state.chLetterIdx]);
+    console.log('[MIC] started, expecting:', state.currentWord?.[state.chLetterIdx]);
   };
 
   state.chRecognition.onresult = (e) => {
-    // Collect ALL alternatives from ALL results in this event
     const transcripts = new Set();
     for (let i = e.resultIndex; i < e.results.length; i++) {
       for (let a = 0; a < e.results[i].length; a++) {
@@ -866,6 +867,7 @@ function startChMic() {
         if (t) transcripts.add(t);
       }
     }
+    if (!transcripts.size) return; // ignore empty results
     const combined = [...transcripts].join(' ');
     console.log('[MIC] result:', combined);
     processSpellingStream(combined);
@@ -875,20 +877,26 @@ function startChMic() {
     console.log('[MIC] error:', e.error);
     state.chListening = false;
     showListeningOverlay(false);
-    if (e.error === 'aborted') return; // intentional stop, don't restart
+    if (e.error === 'aborted') return;
     if (state.phase === 'challenge') {
+      // Back off longer if sessions are dying fast
+      const sessionAge = Date.now() - sessionStart;
+      const delay = sessionAge < 500 ? 800 : 300;
       clearTimeout(state.chMicRestartTimer);
-      state.chMicRestartTimer = setTimeout(() => startChMic(), 300);
+      state.chMicRestartTimer = setTimeout(() => startChMic(), delay);
     }
   };
 
   state.chRecognition.onend = () => {
-    console.log('[MIC] ended, phase:', state.phase, 'letterIdx:', state.chLetterIdx);
+    const sessionAge = Date.now() - sessionStart;
+    console.log('[MIC] ended after', sessionAge + 'ms');
     state.chListening = false;
     showListeningOverlay(false);
     if (state.phase === 'challenge' && state.chLetterIdx < (state.currentWord?.length || 0)) {
+      // If session died very fast, back off to avoid tight loop
+      const delay = sessionAge < 500 ? 800 : 200;
       clearTimeout(state.chMicRestartTimer);
-      state.chMicRestartTimer = setTimeout(() => startChMic(), 200);
+      state.chMicRestartTimer = setTimeout(() => startChMic(), delay);
     }
   };
 
