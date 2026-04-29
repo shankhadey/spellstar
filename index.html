@@ -344,15 +344,15 @@ const NOVELTY_VOICES = ['Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Go
 
 // What speech recognition might return for each letter
 const LETTER_SOUNDS = {
-  a:['ay','a','aye'],          b:['bee','be','b'],                            c:['see','sea','c','si'],
-  d:['dee','d','de'],          e:['ee','e','ea'],                             f:['ef','eff','f'],
-  g:['jee','gee','g','je'],    h:['aych','haitch','h'],                       i:['eye','i','aye'],
-  j:['jay','j','jae'],         k:['kay','k','kae'],                           l:['el','l','ell'],
-  m:['em','m'],                n:['en','n'],                                   o:['oh','o','owe'],
-  p:['pee','p','pe'],          q:['kyoo','q','cue','kyu'],                    r:['ar','r','arr'],
-  s:['es','s','ess'],          t:['tee','t','te'],                            u:['yoo','u','you'],
-  v:['vee','v','ve'],          w:['double yoo','w','double u','doubleyoo'],
-  x:['ex','x'],                y:['why','y','wi'],                            z:['zee','z','ze','zed'],
+  a:['ay','a','aye','eight'],   b:['bee','be','b','beat'],      c:['see','sea','c','si','key'],
+  d:['dee','d','de','deep'],    e:['ee','e','ea','each'],        f:['ef','eff','f','half'],
+  g:['jee','gee','g','je'],     h:['aych','haitch','h','ace'],   i:['eye','i','aye'],
+  j:['jay','j','jae'],          k:['kay','k','kae'],             l:['el','l','ell','ill'],
+  m:['em','m','hmm'],           n:['en','n','and','in','inn'],   o:['oh','o','owe','own'],
+  p:['pee','p','pe'],           q:['kyoo','q','cue','kyu'],      r:['ar','r','arr','are'],
+  s:['es','s','ess','yes'],     t:['tee','t','te','tea','the'],  u:['yoo','u','you'],
+  v:['vee','v','ve'],           w:['double yoo','w','double u','doubleyoo'],
+  x:['ex','x'],                 y:['why','y','wi','one'],         z:['zee','z','ze','zed'],
 };
 
 // ── STATE ────────────────────────────────────────────────────────────────────
@@ -916,9 +916,22 @@ function processSpellingStream(transcript) {
   if (!nextLetter) return;
   const acceptable = LETTER_SOUNDS[nextLetter] || [nextLetter];
 
-  // Tighter matching - split into words and check each one
-  const words = transcript.trim().split(/\s+/);
-  const isMatch = words.some(w => acceptable.some(s => w === s || w === nextLetter));
+  console.log(`[ASR] heard: "${transcript}" | expecting: "${nextLetter}" | acceptable: ${acceptable.join(',')}`);
+
+  // Split transcript into tokens
+  const tokens = transcript.trim().split(/\s+/);
+
+  const isMatch = tokens.some(token => {
+    // Exact match against acceptable sounds
+    if (acceptable.some(s => token === s)) return true;
+    // Exact match against the raw letter
+    if (token === nextLetter) return true;
+    // Starts-with match for longer phonetics (e.g. "double" for w)
+    if (acceptable.some(s => s.length > 3 && token.startsWith(s))) return true;
+    // Acceptable sound is a prefix of what was heard (e.g. "ay" heard as "aye")
+    if (acceptable.some(s => s.length >= 2 && (token.startsWith(s) || s.startsWith(token)))) return true;
+    return false;
+  });
 
   if (isMatch) {
     handleCorrectLetterMatch();
@@ -1006,10 +1019,88 @@ function showTvPrompt(){const tv=detectTV();if(!tv||localStorage.getItem('spells
 window.dismissTvPrompt=function(){document.getElementById('tv-prompt').style.display='none';localStorage.setItem('spellstar_tv_bookmarked','1');};
 
 // ── DEBUG ────────────────────────────────────────────────────────────────────────
+const debugLogs = [];
+const MAX_LOGS = 60;
+
+// Override console.log to also capture to debug panel
+const _origLog = console.log.bind(console);
+console.log = function(...args) {
+  _origLog(...args);
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  debugLogs.push(msg);
+  if (debugLogs.length > MAX_LOGS) debugLogs.shift();
+  // If panel is open, append immediately
+  const panel = document.getElementById('debug-panel');
+  if (panel && panel.style.display !== 'none') {
+    appendDebugLog(msg);
+  }
+};
+
+function appendDebugLog(msg) {
+  const panel = document.getElementById('debug-panel');
+  if (!panel) return;
+  const line = document.createElement('div');
+  // Color-code ASR lines
+  if (msg.includes('[ASR]')) line.style.color = '#4ecdc4';
+  else if (msg.includes('[CH MIC]') || msg.includes('error')) line.style.color = '#ff6b6b';
+  else if (msg.includes('TTS')) line.style.color = '#f7c948';
+  else line.style.color = '#0f0';
+  line.textContent = msg;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+}
+
 let dTaps=0,dTimer=null;
-window.toggleDebugPanel=function(){const p=document.getElementById('debug-panel');p.style.display=p.style.display==='none'?'block':'none';if(p.style.display==='block')runDebug();};
-document.addEventListener('click',e=>{if(e.clientX<150&&e.clientY>(window.innerHeight-150)){dTaps++;clearTimeout(dTimer);dTimer=setTimeout(()=>dTaps=0,1500);if(dTaps>=3){dTaps=0;toggleDebugPanel();}}});
-function runDebug(){const p=document.getElementById('debug-panel');p.innerHTML='<b>SpellStar v2.0</b><br>';const log=m=>{p.innerHTML+=m+'<br>';p.scrollTop=p.scrollHeight;console.log(m);};log('Phase:'+state.phase+' Mode:'+state.mode+' Word:'+state.currentWord);log('TTS:'+(window.speechSynthesis?'YES':'NO'));if(window.speechSynthesis){const all=window.speechSynthesis.getVoices();log('Voices:'+all.length);all.forEach(v=>log('  '+v.name+' '+v.lang));log('Picked:'+(state.pickedVoice?.name||'none')+' pitch:'+state.pitch);const t=new SpeechSynthesisUtterance('hello');t.onstart=()=>log('TTS OK');t.onerror=e=>log('TTS ERR:'+e.error);window.speechSynthesis.speak(t);}}
+window.toggleDebugPanel = function() {
+  const panel = document.getElementById('debug-panel');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // Show header + state + all buffered logs
+    panel.innerHTML = '';
+    const header = document.createElement('div');
+    header.style.cssText = 'color:#f7c948;font-weight:bold;margin-bottom:6px;border-bottom:1px solid #333;padding-bottom:4px;';
+    header.innerHTML = `SpellStar v2.0 Debug &nbsp;<span style="color:#888;font-size:11px;">tap again to close</span>`;
+    panel.appendChild(header);
+
+    // State snapshot
+    const snap = [
+      `Phase: ${state.phase} | Mode: ${state.mode}`,
+      `Word: ${state.currentWord || 'none'} | Letter: ${state.chLetterIdx}`,
+      `MicListening: ${state.chListening} | Grade: ${state.grade}`,
+      `TTS: ${window.speechSynthesis ? 'YES' : 'NO'} | Voices: ${state.voices.length}`,
+      `Voice: ${state.pickedVoice?.name || 'none'} | Pitch: ${state.pitch}`,
+      `SpeechRec: ${state.speechSupported ? 'YES' : 'NO'}`,
+      '─── Live Logs ───',
+    ];
+    snap.forEach(s => {
+      const d = document.createElement('div');
+      d.style.color = '#aaa'; d.textContent = s;
+      panel.appendChild(d);
+    });
+
+    // Replay buffered logs
+    debugLogs.forEach(m => appendDebugLog(m));
+    panel.scrollTop = panel.scrollHeight;
+
+    // Run TTS test
+    if (window.speechSynthesis) {
+      const t = new SpeechSynthesisUtterance('hello');
+      t.onstart = () => console.log('[TTS] test OK');
+      t.onerror = e => console.log('[TTS] test ERROR:', e.error);
+      window.speechSynthesis.speak(t);
+    }
+  }
+};
+
+document.addEventListener('click', e => {
+  if (e.clientX < 150 && e.clientY > (window.innerHeight - 150)) {
+    dTaps++;
+    clearTimeout(dTimer);
+    dTimer = setTimeout(() => dTaps = 0, 1500);
+    if (dTaps >= 3) { dTaps = 0; toggleDebugPanel(); }
+  }
+});
 </script>
 </body>
 </html>
